@@ -11,12 +11,14 @@ import time
 import aiohttp
 import numpy as np
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import HTMLResponse
 import uvicorn
+from urllib.parse import quote
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +56,18 @@ class MarketSentiment:
     trend_strength: float
     support_level: float
     resistance_level: float
+    
+@dataclass  
+class AIMarketAnalysis:
+    """최신 AI 모델 기반 시장 분석"""
+    news_sentiment: float  # -1 (negative) to 1 (positive)
+    social_sentiment: float
+    ai_prediction: str  # buy/sell/hold
+    confidence_score: float
+    market_regime: str  # bull/bear/sideways
+    volatility_forecast: float
+    key_events: List[str]
+    ai_reasoning: str
 
 # 글로벌 상태
 class TradingBot:
@@ -378,22 +392,55 @@ async def advanced_trading_strategy():
             
             # 고도화된 기술적 분석 및 거래 결정
             for symbol in ['BTC', 'ETH']:
+                # 기술적 분석
                 signal = analyze_professional_signal(symbol, bot.price_history[symbol])
                 
-                if signal['action'] != 'hold' and signal['confidence'] > 0.65:
+                # AI 분석 결과 가져오기
+                ai_insight = bot.get_latest_ai_insights()
+                ai_boost = 0.0
+                
+                if (ai_insight.get('status') == 'active' and 
+                    ai_insight.get('symbol') == symbol and
+                    ai_insight.get('confidence', 0) > 0.6):
+                    
+                    ai_prediction = ai_insight.get('ai_prediction', 'hold')
+                    
+                    # AI와 기술적 분석이 일치할 때 신뢰도 상승
+                    if ai_prediction == signal['action']:
+                        ai_boost = 0.2
+                        logger.info(f"AI-Technical alignment for {symbol}: {ai_prediction} (boost: +{ai_boost})")
+                    # AI와 기술적 분석이 반대일 때 신뢰도 하락
+                    elif ((ai_prediction == 'buy' and signal['action'] == 'sell') or 
+                          (ai_prediction == 'sell' and signal['action'] == 'buy')):
+                        ai_boost = -0.3
+                        logger.warning(f"AI-Technical conflict for {symbol}: AI={ai_prediction}, Tech={signal['action']} (penalty: {ai_boost})")
+                
+                # AI 부스팅 적용된 최종 신뢰도
+                final_confidence = max(0.1, min(0.95, signal['confidence'] + ai_boost))
+                
+                if signal['action'] != 'hold' and final_confidence > 0.65:
                     # 동적 리스크 관리
-                    position_size = calculate_position_size(signal, bot.current_balance)
+                    enhanced_signal = signal.copy()
+                    enhanced_signal['confidence'] = final_confidence
+                    enhanced_signal['ai_boost'] = ai_boost
+                    
+                    position_size = calculate_position_size(enhanced_signal, bot.current_balance)
                     
                     if position_size >= 25:  # 최소 $25 거래
                         # 실제 거래 실행
-                        trade_result = await execute_real_trade(symbol, signal, position_size)
+                        trade_result = await execute_real_trade(symbol, enhanced_signal, position_size)
                         
                         if trade_result:
+                            # AI 부스트 정보 추가
+                            trade_result['ai_boost'] = ai_boost
+                            trade_result['ai_reasoning'] = ai_insight.get('key_insight', '')
+                            
                             bot.trade_history.append(trade_result)
                             bot.total_trades += 1
                             update_performance_metrics(trade_result)
                             
-                            print(f"💰 거래 실행: {symbol} {trade_result['action']} ${position_size:.2f} | 신뢰도: {signal['confidence']:.2f} | 예상수익: {trade_result.get('expected_profit', 0):.2f}%")
+                            boost_text = f" (AI: {ai_boost:+.2f})" if ai_boost != 0 else ""
+                            print(f"🤖 AI-향상 거래: {symbol} {trade_result['action']} ${position_size:.2f} | 신뢰도: {final_confidence:.2f}{boost_text} | 예상수익: {trade_result.get('expected_profit', 0):.2f}%")
             
             # 데이터 모드에 따른 분석 주기 조정
             analysis_interval = 60 if bot.use_real_data else 30
@@ -648,6 +695,340 @@ def analyze_trend(prices: list) -> str:
         return 'downtrend'
     else:
         return 'sideways'
+
+# =============================================================================
+# 최신 AI 모델 통합 분석 시스템
+# =============================================================================
+
+async def get_real_time_news_sentiment(symbol: str) -> float:
+    """실시간 뉴스 감정분석 (NewsAPI + AI)"""
+    try:
+        # NewsAPI로 최신 뉴스 가져오기
+        news_api_key = os.environ.get('NEWS_API_KEY', '')
+        if not news_api_key:
+            # 대체 뉴스 소스 사용 (RSS 또는 공개 API)
+            return await get_alternative_news_sentiment(symbol)
+        
+        search_terms = {
+            'BTC': 'Bitcoin OR BTC OR cryptocurrency',
+            'ETH': 'Ethereum OR ETH OR crypto'
+        }.get(symbol, symbol)
+        
+        url = f"https://newsapi.org/v2/everything?q={quote(search_terms)}&sortBy=publishedAt&language=en&pageSize=10&apiKey={news_api_key}"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    articles = data.get('articles', [])
+                    
+                    if not articles:
+                        return 0.0
+                    
+                    # AI 기반 감정 분석
+                    sentiments = []
+                    for article in articles[:5]:  # 최신 5개 기사
+                        title = article.get('title', '')
+                        content = article.get('description', '')
+                        
+                        if title or content:
+                            text = f"{title} {content}"
+                            sentiment = await analyze_text_sentiment_with_ai(text)
+                            sentiments.append(sentiment)
+                    
+                    return np.mean(sentiments) if sentiments else 0.0
+                    
+    except Exception as e:
+        logger.error(f"뉴스 감정분석 에러: {e}")
+        return 0.0
+
+async def get_alternative_news_sentiment(symbol: str) -> float:
+    """대체 뉴스 소스로 감정분석 (CoinGecko/CoinDesk RSS)"""
+    try:
+        # CoinGecko API로 시장 심리 지수 가져오기
+        url = "https://api.coingecko.com/api/v3/global"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    market_cap_change = data.get('data', {}).get('market_cap_change_percentage_24h_usd', 0)
+                    
+                    # 시장 변동에 기반한 감정 예측
+                    if market_cap_change > 5:
+                        return 0.7  # 긍정적
+                    elif market_cap_change > 2:
+                        return 0.3
+                    elif market_cap_change < -5:
+                        return -0.7  # 부정적
+                    elif market_cap_change < -2:
+                        return -0.3
+                    else:
+                        return 0.0
+                        
+    except Exception as e:
+        logger.error(f"대체 뉴스 소스 에러: {e}")
+        return 0.0
+
+async def analyze_text_sentiment_with_ai(text: str) -> float:
+    """최신 AI 모델로 텍스트 감정분석"""
+    try:
+        # OpenAI API 사용 (가장 정확하고 빠름)
+        openai_api_key = os.environ.get('OPENAI_API_KEY', '')
+        
+        if openai_api_key:
+            return await analyze_with_openai(text, openai_api_key)
+        
+        # Anthropic Claude API 사용 (대체)
+        anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+        
+        if anthropic_api_key:
+            return await analyze_with_anthropic(text, anthropic_api_key)
+        
+        # 기본 규칙 기반 감정분석
+        return analyze_with_rules(text)
+        
+    except Exception as e:
+        logger.error(f"AI 감정분석 에러: {e}")
+        return 0.0
+
+async def analyze_with_openai(text: str, api_key: str) -> float:
+    """반OpenAI API로 감정분석"""
+    try:
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "gpt-4o-mini",  # 저렴하고 빠른 모델
+            "messages": [
+                {
+                    "role": "system", 
+                    "content": "You are a financial sentiment analyzer. Analyze the sentiment of crypto/trading related text and return ONLY a number between -1 (very negative) and 1 (very positive). No explanation needed."
+                },
+                {
+                    "role": "user", 
+                    "content": f"Analyze sentiment: {text[:500]}"
+                }
+            ],
+            "max_tokens": 10,
+            "temperature": 0.1
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    sentiment_text = result['choices'][0]['message']['content'].strip()
+                    
+                    # 숫자 추출
+                    import re
+                    numbers = re.findall(r'-?\d+\.?\d*', sentiment_text)
+                    if numbers:
+                        sentiment = float(numbers[0])
+                        return max(-1.0, min(1.0, sentiment))  # -1~1 범위 제한
+                        
+    except Exception as e:
+        logger.error(f"OpenAI API 에러: {e}")
+    
+    return 0.0
+
+async def analyze_with_anthropic(text: str, api_key: str) -> float:
+    """믏Anthropic Claude API로 감정분석"""
+    try:
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": api_key,
+            "Content-Type": "application/json",
+            "anthropic-version": "2023-06-01"
+        }
+        
+        payload = {
+            "model": "claude-3-haiku-20240307",  # 빠르고 저렴한 모델
+            "max_tokens": 10,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Analyze the financial sentiment of this text and return ONLY a number between -1 (very negative) and 1 (very positive): {text[:500]}"
+                }
+            ]
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    sentiment_text = result['content'][0]['text'].strip()
+                    
+                    # 숫자 추출
+                    import re
+                    numbers = re.findall(r'-?\d+\.?\d*', sentiment_text)
+                    if numbers:
+                        sentiment = float(numbers[0])
+                        return max(-1.0, min(1.0, sentiment))
+                        
+    except Exception as e:
+        logger.error(f"Anthropic API 에러: {e}")
+    
+    return 0.0
+
+def analyze_with_rules(text: str) -> float:
+    """규칙 기반 간단 감정분석"""
+    text_lower = text.lower()
+    
+    # 긍정적 키워드
+    positive_words = [
+        'bull', 'bullish', 'pump', 'moon', 'surge', 'rally', 'breakthrough', 
+        'adoption', 'institutional', 'breakthrough', 'all-time high', 'ath',
+        'buy', 'long', 'upward', 'positive', 'growth', 'profit', 'gain'
+    ]
+    
+    # 부정적 키워드
+    negative_words = [
+        'bear', 'bearish', 'dump', 'crash', 'fall', 'decline', 'correction',
+        'fear', 'panic', 'sell-off', 'liquidation', 'scam', 'hack',
+        'sell', 'short', 'downward', 'negative', 'loss', 'drop'
+    ]
+    
+    positive_score = sum(1 for word in positive_words if word in text_lower)
+    negative_score = sum(1 for word in negative_words if word in text_lower)
+    
+    if positive_score + negative_score == 0:
+        return 0.0
+    
+    sentiment = (positive_score - negative_score) / (positive_score + negative_score)
+    return max(-1.0, min(1.0, sentiment))
+
+async def get_social_media_sentiment(symbol: str) -> float:
+    """소셜미디어 감정분석 (Twitter/Reddit 시므레이션)"""
+    try:
+        # 실제 환경에서는 Twitter API v2나 Reddit API 사용
+        # 여기서는 시므레이션으로 방송젓 획득 대체
+        
+        # 가상의 소셜 감정 데이터 (실제 배여에서는 API 데이터 사용)
+        base_sentiment = random.uniform(-0.5, 0.5)
+        
+        # 분동성 기반 소셜 감정 조정
+        if symbol in bot.price_history:
+            recent_prices = bot.price_history[symbol][-10:] if len(bot.price_history[symbol]) >= 10 else bot.price_history[symbol]
+            if len(recent_prices) >= 2:
+                price_change = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
+                
+                # 가격 상승시 소셜 감정도 긍정적으로
+                social_boost = price_change * 2  # 가격 변동에 2배 반응
+                base_sentiment += social_boost
+        
+        return max(-1.0, min(1.0, base_sentiment))
+        
+    except Exception as e:
+        logger.error(f"소셜미디어 감정분석 에러: {e}")
+        return 0.0
+
+async def generate_ai_market_prediction(symbol: str, technical_data: dict, news_sentiment: float, social_sentiment: float) -> AIMarketAnalysis:
+    """종합 AI 예측 생성"""
+    try:
+        # 기술적 분석 + 감정 분석 종합
+        technical_signal = technical_data.get('action', 'hold')
+        technical_confidence = technical_data.get('confidence', 0.5)
+        
+        # AI 예측 로직
+        sentiment_avg = (news_sentiment + social_sentiment) / 2
+        
+        # 종합 점수 계산
+        if technical_signal == 'buy':
+            technical_score = technical_confidence
+        elif technical_signal == 'sell':
+            technical_score = -technical_confidence
+        else:
+            technical_score = 0
+        
+        combined_score = (technical_score * 0.7) + (sentiment_avg * 0.3)
+        
+        # 최종 예측
+        if combined_score > 0.3:
+            ai_prediction = 'buy'
+            confidence = min(0.95, abs(combined_score) + 0.1)
+        elif combined_score < -0.3:
+            ai_prediction = 'sell'
+            confidence = min(0.95, abs(combined_score) + 0.1)
+        else:
+            ai_prediction = 'hold'
+            confidence = 0.5
+        
+        # 시장 체제 분류
+        if sentiment_avg > 0.5:
+            market_regime = 'bull'
+        elif sentiment_avg < -0.5:
+            market_regime = 'bear'
+        else:
+            market_regime = 'sideways'
+        
+        # 변돐성 예측
+        volatility_forecast = technical_data.get('technical_data', {}).get('sentiment', {}).get('volatility_index', 20)
+        
+        # AI 추론 생성
+        reasoning_parts = []
+        if abs(technical_score) > 0.5:
+            reasoning_parts.append(f"Technical analysis shows {technical_signal} signal (confidence: {technical_confidence:.2f})")
+        
+        if abs(news_sentiment) > 0.3:
+            reasoning_parts.append(f"News sentiment is {'positive' if news_sentiment > 0 else 'negative'} ({news_sentiment:.2f})")
+        
+        if abs(social_sentiment) > 0.3:
+            reasoning_parts.append(f"Social sentiment is {'bullish' if social_sentiment > 0 else 'bearish'} ({social_sentiment:.2f})")
+        
+        ai_reasoning = " | ".join(reasoning_parts) if reasoning_parts else f"Neutral market conditions for {symbol}"
+        
+        return AIMarketAnalysis(
+            news_sentiment=news_sentiment,
+            social_sentiment=social_sentiment,
+            ai_prediction=ai_prediction,
+            confidence_score=confidence,
+            market_regime=market_regime,
+            volatility_forecast=volatility_forecast,
+            key_events=[f"AI Analysis for {symbol}"],
+            ai_reasoning=ai_reasoning
+        )
+        
+    except Exception as e:
+        logger.error(f"AI 예측 생성 에러: {e}")
+        return AIMarketAnalysis(
+            news_sentiment=0.0, social_sentiment=0.0, ai_prediction='hold',
+            confidence_score=0.3, market_regime='unknown', volatility_forecast=20.0,
+            key_events=[], ai_reasoning=f"Analysis error for {symbol}"
+        )
+
+async def update_ai_market_analysis(symbol: str):
+    """종합 AI 시장 분석 업데이트"""
+    try:
+        logger.info(f"AI 마켓 분석 시작: {symbol}")
+        
+        # 1. 뉴스 감정분석
+        news_sentiment = await get_real_time_news_sentiment(symbol)
+        
+        # 2. 소셜미디어 감정분석
+        social_sentiment = await get_social_media_sentiment(symbol)
+        
+        # 3. 기술적 분석 데이터 가져오기
+        if symbol in bot.price_history and len(bot.price_history[symbol]) >= 50:
+            technical_signal = analyze_professional_signal(symbol, bot.price_history[symbol])
+        else:
+            technical_signal = {'action': 'hold', 'confidence': 0.5, 'technical_data': {}}
+        
+        # 4. AI 예측 생성
+        ai_analysis = await generate_ai_market_prediction(
+            symbol, technical_signal, news_sentiment, social_sentiment
+        )
+        
+        # 5. 결과 캐시 업데이트
+        await bot.update_ai_analysis_cache(symbol, ai_analysis)
+        
+        logger.info(f"AI 분석 완료 - {symbol}: {ai_analysis.ai_prediction} (confidence: {ai_analysis.confidence_score:.2f})")
+        
+    except Exception as e:
+        logger.error(f"AI 마켓 분석 에러 ({symbol}): {e}")
 
 def calculate_rsi(prices: list, period: int = 14) -> float:
     """정확한 RSI 계산"""
@@ -1370,6 +1751,37 @@ async def get_backtest_results():
     """백테스트 결과 조회"""
     return {"results": backtest_engine.results[-5:]}  # 최근 5개
 
+@app.get("/api/ai/analysis/{symbol}")
+async def get_ai_analysis(symbol: str):
+    """AI 분석 결과 조회"""
+    if symbol.upper() not in ['BTC', 'ETH']:
+        return {"error": "지원되지 않는 심벼"}
+    
+    analysis = bot.ai_analysis_cache.get(symbol.upper(), {})
+    if not analysis:
+        return {"status": "no_analysis", "message": "AI 분석 데이터가 없습니다"}
+    
+    return {
+        "status": "success",
+        "symbol": symbol.upper(),
+        "analysis": analysis
+    }
+
+@app.post("/api/ai/update/{symbol}")
+async def trigger_ai_analysis(symbol: str):
+    """AI 분석 수동 트리거"""
+    if symbol.upper() not in ['BTC', 'ETH']:
+        return {"error": "지원되지 않는 심볼"}
+    
+    # 백그라운드에서 AI 분석 실행
+    asyncio.create_task(update_ai_market_analysis(symbol.upper()))
+    
+    return {
+        "status": "triggered",
+        "message": f"AI 분석 시작: {symbol.upper()}",
+        "estimated_time": "30-60초"
+    }
+
 # WebSocket 연결 관리
 connections = []
 
@@ -1400,6 +1812,34 @@ async def startup():
     """앱 시작시 백그라운드 태스크 실행"""
     asyncio.create_task(update_prices())
     asyncio.create_task(advanced_trading_strategy())
+    # AI 분석 주기적 업데이트 시작
+    asyncio.create_task(periodic_ai_updates())
+
+async def periodic_ai_updates():
+    """주기적 AI 분석 업데이트 (10분마다)"""
+    await asyncio.sleep(30)  # 초기 대기
+    
+    while True:
+        try:
+            if bot.running:
+                logger.info("🤖 주기적 AI 분석 시작...")
+                
+                # BTC와 ETH 동시 분석
+                tasks = [
+                    update_ai_market_analysis('BTC'),
+                    update_ai_market_analysis('ETH')
+                ]
+                
+                await asyncio.gather(*tasks, return_exceptions=True)
+                
+                logger.info("🎆 AI 분석 완료")
+            
+            # 10분 대기
+            await asyncio.sleep(600)
+            
+        except Exception as e:
+            logger.error(f"주기적 AI 업데이트 에러: {e}")
+            await asyncio.sleep(300)  # 에러 시 5분 대기
     print("✅ Minimal Trading Bot 시작완료")
 
 if __name__ == "__main__":
