@@ -1,0 +1,41 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "python railway_trader.py",
+    "restartPolicyType": "ALWAYS",
+    "restartPolicyMaxRetries": 10
+  },
+  "services": [
+    {
+      "name": "trader-bot",
+      "source": {
+        "repo": "https://github.com/yourusername/hypersonic-trader"
+      },
+      "envVars": {
+        "BINANCE_API_KEY": {
+          "type": "secret"
+        },
+        "BINANCE_SECRET": {
+          "type": "secret"
+        },
+        "COINBASE_API_KEY": {
+          "type": "secret"
+        },
+        "COINBASE_SECRET": {
+          "type": "secret"
+        },
+        "OPENAI_API_KEY": {
+          "type": "secret"
+        }
+      },
+      "healthcheck": {
+        "path": "/health",
+        "port": 8000,
+        "type": "http"
+      }
+    }
+  ]
+}
