@@ -1,1 +1,1 @@
-web: python enterprise_trading_system.py
+web: python minimal_trading_system.py
