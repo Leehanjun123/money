@@ -55,61 +55,188 @@ app = FastAPI(title="Minimal Trading Bot")
 
 # 실시간 가격 업데이트
 async def update_prices():
-    """실시간 가격 시뮬레이션"""
+    """개선된 시장 시뮬레이션 - 실제 패턴 모방"""
+    # 실제 시장 패턴을 모방한 가격 모델
+    trend = 1.0  # 전체적 추세
+    volatility = 0.02  # 기본 변동성
+    
     while True:
         try:
-            # BTC 가격 업데이트 (랜덤 워크)
-            change = random.uniform(-0.02, 0.02)  # ±2% 변동
-            bot.current_prices['BTC'] *= (1 + change)
-            bot.current_prices['BTC'] = max(20000, min(80000, bot.current_prices['BTC']))  # 범위 제한
+            # 트렌드 변경 (5% 확률)
+            if random.random() < 0.05:
+                trend *= random.uniform(0.95, 1.05)
+                trend = max(0.8, min(1.2, trend))  # 트렌드 제한
             
-            # ETH 가격 업데이트
-            change = random.uniform(-0.025, 0.025)  # ±2.5% 변동
-            bot.current_prices['ETH'] *= (1 + change)
-            bot.current_prices['ETH'] = max(1000, min(5000, bot.current_prices['ETH']))  # 범위 제한
+            # 변동성 조정 (시장 상황 반영)
+            if random.random() < 0.1:
+                volatility = random.uniform(0.01, 0.04)  # 1-4% 변동성
             
-            await asyncio.sleep(2)  # 2초마다 업데이트
+            # BTC 가격 업데이트 (트렌드 + 노이즈)
+            trend_factor = trend * random.uniform(0.999, 1.001)
+            noise = random.uniform(-volatility, volatility)
+            bot.current_prices['BTC'] *= (trend_factor + noise)
+            bot.current_prices['BTC'] = max(20000, min(100000, bot.current_prices['BTC']))
+            
+            # ETH 가격 (BTC와 상관관계 0.7)
+            btc_influence = 0.7 * (trend_factor + noise * 0.8)
+            eth_noise = 0.3 * random.uniform(-volatility * 1.2, volatility * 1.2)
+            bot.current_prices['ETH'] *= (btc_influence + eth_noise)
+            bot.current_prices['ETH'] = max(1000, min(6000, bot.current_prices['ETH']))
+            
+            await asyncio.sleep(2)
         except Exception as e:
             print(f"가격 업데이트 에러: {e}")
             await asyncio.sleep(5)
 
 # 간단한 트레이딩 로직
 async def simple_trading_strategy():
-    """초간단 트레이딩 전략"""
+    """개선된 스마트 트레이딩 전략"""
+    price_history = {'BTC': [], 'ETH': []}
+    
     while True:
         try:
             if not bot.running:
                 await asyncio.sleep(10)
                 continue
             
-            # 5% 확률로 거래
-            if random.random() < 0.05:
-                symbol = random.choice(['BTC', 'ETH'])
-                action = random.choice(['buy', 'sell'])
-                amount = random.uniform(0.01, 0.1)
-                
-                trade = {
-                    'time': datetime.now().isoformat(),
-                    'symbol': symbol,
-                    'action': action,
-                    'amount': amount,
-                    'price': bot.current_prices[symbol]
-                }
-                
-                bot.trade_history.append(trade)
-                bot.total_trades += 1
-                
-                # 최근 50개 거래만 유지
-                if len(bot.trade_history) > 50:
-                    bot.trade_history = bot.trade_history[-50:]
-                
-                print(f"🔄 거래 실행: {symbol} {action} {amount:.4f} @ ${bot.current_prices[symbol]:,.2f}")
+            # 가격 히스토리 업데이트
+            for symbol in ['BTC', 'ETH']:
+                price_history[symbol].append(bot.current_prices[symbol])
+                if len(price_history[symbol]) > 50:  # 최근 50개만 유지
+                    price_history[symbol] = price_history[symbol][-50:]
             
-            await asyncio.sleep(10)  # 10초마다 체크
+            # 기술적 분석 기반 거래 (20개 이상 데이터 필요)
+            for symbol in ['BTC', 'ETH']:
+                if len(price_history[symbol]) >= 20:
+                    signal = analyze_market_signal(symbol, price_history[symbol])
+                    
+                    if signal['action'] != 'hold' and signal['confidence'] > 0.6:
+                        # 리스크 관리: 잔액의 최대 10%만 거래
+                        max_trade_amount = bot.current_balance * 0.1
+                        trade_amount = min(max_trade_amount, signal['confidence'] * 100)
+                        
+                        if trade_amount >= 10:  # 최소 $10 거래
+                            trade = execute_smart_trade(symbol, signal, trade_amount)
+                            if trade:
+                                bot.trade_history.append(trade)
+                                bot.total_trades += 1
+                                
+                                # 수익/손실 추적
+                                if trade['action'] == 'sell' and 'profit' in trade:
+                                    bot.current_balance += trade['profit']
+                                
+                                print(f"🎯 스마트 거래: {symbol} {trade['action']} ${trade_amount:.2f} (신뢰도: {signal['confidence']:.2f})")
+            
+            await asyncio.sleep(30)  # 30초마다 분석
             
         except Exception as e:
             print(f"트레이딩 에러: {e}")
             await asyncio.sleep(30)
+
+def analyze_market_signal(symbol: str, prices: list) -> dict:
+    """기술적 분석 기반 시장 신호 생성"""
+    try:
+        if len(prices) < 20:
+            return {'action': 'hold', 'confidence': 0.0, 'reasoning': 'insufficient_data'}
+        
+        current_price = prices[-1]
+        
+        # RSI 계산 (단순 버전)
+        price_changes = [prices[i] - prices[i-1] for i in range(1, min(15, len(prices)))]
+        gains = [c for c in price_changes if c > 0]
+        losses = [-c for c in price_changes if c < 0]
+        
+        avg_gain = sum(gains) / len(gains) if gains else 0.01
+        avg_loss = sum(losses) / len(losses) if losses else 0.01
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        
+        # 이동평균
+        sma_10 = sum(prices[-10:]) / 10
+        sma_20 = sum(prices[-20:]) / 20
+        
+        # 신호 생성
+        signals = []
+        confidence_factors = []
+        
+        # RSI 신호
+        if rsi < 30:  # 과매도
+            signals.append('buy')
+            confidence_factors.append(0.8)
+        elif rsi > 70:  # 과매수
+            signals.append('sell')
+            confidence_factors.append(0.8)
+        else:
+            signals.append('hold')
+            confidence_factors.append(0.2)
+        
+        # 이동평균 신호
+        if current_price > sma_10 > sma_20:  # 상승 추세
+            signals.append('buy')
+            confidence_factors.append(0.6)
+        elif current_price < sma_10 < sma_20:  # 하락 추세
+            signals.append('sell')
+            confidence_factors.append(0.6)
+        else:
+            signals.append('hold')
+            confidence_factors.append(0.3)
+        
+        # 최종 신호 결정
+        buy_score = sum(cf for sig, cf in zip(signals, confidence_factors) if sig == 'buy')
+        sell_score = sum(cf for sig, cf in zip(signals, confidence_factors) if sig == 'sell')
+        hold_score = sum(cf for sig, cf in zip(signals, confidence_factors) if sig == 'hold')
+        
+        max_score = max(buy_score, sell_score, hold_score)
+        
+        if max_score == buy_score and buy_score > 0.5:
+            action = 'buy'
+            confidence = min(buy_score / 2, 0.9)
+        elif max_score == sell_score and sell_score > 0.5:
+            action = 'sell' 
+            confidence = min(sell_score / 2, 0.9)
+        else:
+            action = 'hold'
+            confidence = 0.3
+        
+        return {
+            'action': action,
+            'confidence': confidence,
+            'reasoning': f'RSI:{rsi:.1f}, SMA10:{sma_10:.0f}, SMA20:{sma_20:.0f}'
+        }
+        
+    except Exception as e:
+        return {'action': 'hold', 'confidence': 0.0, 'reasoning': 'analysis_error'}
+
+def execute_smart_trade(symbol: str, signal: dict, amount: float) -> dict:
+    """스마트 거래 실행"""
+    try:
+        current_price = bot.current_prices[symbol]
+        
+        trade = {
+            'time': datetime.now().isoformat(),
+            'symbol': symbol,
+            'action': signal['action'],
+            'amount': amount,
+            'price': current_price,
+            'confidence': signal['confidence'],
+            'reasoning': signal['reasoning']
+        }
+        
+        # 간단한 수익/손실 시뮬레이션
+        if signal['action'] == 'buy':
+            # 매수: 향후 가격 상승 기대
+            expected_return = signal['confidence'] * 0.02  # 최대 2% 수익 기대
+            trade['expected_profit'] = amount * expected_return
+            
+        elif signal['action'] == 'sell':
+            # 매도: 보유 포지션 청산 (임시 수익 계산)
+            profit_rate = (signal['confidence'] - 0.5) * 0.04  # -2% ~ +2%
+            trade['profit'] = amount * profit_rate
+        
+        return trade
+        
+    except Exception as e:
+        return None
 
 # API 엔드포인트
 @app.get("/")
