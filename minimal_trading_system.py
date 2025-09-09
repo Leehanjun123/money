@@ -9,11 +9,51 @@ import os
 import random
 import time
 import aiohttp
+import numpy as np
+import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass, asdict
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import HTMLResponse
 import uvicorn
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+@dataclass
+class AdvancedTechnicalIndicators:
+    """고급 기술적 지표 데이터클래스"""
+    rsi_14: float
+    rsi_7: float  # 단기 RSI
+    sma_20: float
+    sma_50: float
+    ema_12: float
+    ema_26: float
+    macd_line: float
+    macd_signal: float
+    macd_histogram: float
+    bb_upper: float
+    bb_middle: float
+    bb_lower: float
+    bb_width: float  # 밴드 폭
+    stochastic_k: float
+    stochastic_d: float
+    williams_r: float
+    atr: float  # Average True Range
+    volume_sma: float
+    price_volume_trend: float
+    momentum: float
+    
+@dataclass
+class MarketSentiment:
+    """시장 심리 분석"""
+    fear_greed_index: float
+    volatility_index: float
+    trend_strength: float
+    support_level: float
+    resistance_level: float
 
 # 글로벌 상태
 class TradingBot:
@@ -32,6 +72,18 @@ class TradingBot:
         self.total_profit = 0.0
         self.win_rate = 0.0
         self.max_drawdown = 0.0
+        self.sharpe_ratio = 0.0
+        self.profit_factor = 0.0
+        self.max_consecutive_wins = 0
+        self.max_consecutive_losses = 0
+        self.advanced_metrics = {
+            'alpha': 0.0,
+            'beta': 1.0,
+            'sortino_ratio': 0.0,
+            'calmar_ratio': 0.0,
+            'var_95': 0.0,
+            'expected_shortfall': 0.0
+        }
         self.api_key = os.environ.get('BINANCE_API_KEY', '')
         self.api_secret = os.environ.get('BINANCE_API_SECRET', '')
         self.use_real_data = bool(self.api_key)  # API 키만 있어도 가격 조회 가능
@@ -50,6 +102,10 @@ class TradingBot:
         initial_balance = float(os.environ.get('INITIAL_BALANCE', '100000.0'))
         total_return = ((self.current_balance - initial_balance) / initial_balance) * 100 if initial_balance > 0 else 0
         
+        # 일간/월간 수익률 계산
+        daily_return = self.calculate_daily_return()
+        monthly_return = self.calculate_monthly_return()
+        
         return {
             'running': self.running,
             'uptime': uptime,
@@ -59,12 +115,83 @@ class TradingBot:
             'btc_price': self.current_prices['BTC'],
             'eth_price': self.current_prices['ETH'],
             'total_return': total_return,
+            'daily_return': daily_return,
+            'monthly_return': monthly_return,
             'total_profit': self.total_profit,
             'win_rate': self.win_rate * 100,
             'max_drawdown': self.max_drawdown * 100,
+            'sharpe_ratio': self.sharpe_ratio,
+            'profit_factor': self.profit_factor,
             'api_mode': '실제 데이터' if self.use_real_data else '시뮬레이션',
-            'data_points': len(self.price_history.get('BTC', []))
+            'data_points': len(self.price_history.get('BTC', [])),
+            'advanced_metrics': self.advanced_metrics,
+            'recent_performance': self.get_recent_performance()
         }
+    
+    def calculate_daily_return(self) -> float:
+        """일간 수익률 계산"""
+        if len(self.trade_history) < 2:
+            return 0.0
+        
+        today_trades = [t for t in self.trade_history if 
+                       datetime.fromisoformat(t['timestamp']).date() == datetime.now().date()]
+        
+        if not today_trades:
+            return 0.0
+            
+        daily_profit = sum(t.get('profit_loss', 0) for t in today_trades if 'profit_loss' in t)
+        return (daily_profit / self.current_balance) * 100
+    
+    def calculate_monthly_return(self) -> float:
+        """월간 수익률 계산"""
+        if len(self.trade_history) < 2:
+            return 0.0
+        
+        current_month = datetime.now().month
+        month_trades = [t for t in self.trade_history if 
+                       datetime.fromisoformat(t['timestamp']).month == current_month]
+        
+        if not month_trades:
+            return 0.0
+            
+        monthly_profit = sum(t.get('profit_loss', 0) for t in month_trades if 'profit_loss' in t)
+        return (monthly_profit / self.current_balance) * 100
+    
+    def get_recent_performance(self) -> Dict:
+        """최근 성과 요약"""
+        if len(self.trade_history) < 5:
+            return {'status': 'insufficient_data'}
+        
+        recent_trades = self.trade_history[-20:]  # 최근 20거래
+        profitable = [t for t in recent_trades if t.get('profit_loss', 0) > 0]
+        
+        return {
+            'recent_win_rate': len(profitable) / len(recent_trades) * 100,
+            'recent_avg_profit': np.mean([t.get('profit_loss', 0) for t in profitable]) if profitable else 0,
+            'recent_avg_loss': np.mean([t.get('profit_loss', 0) for t in recent_trades if t.get('profit_loss', 0) < 0]),
+            'consecutive_wins': self.count_consecutive_wins(),
+            'consecutive_losses': self.count_consecutive_losses()
+        }
+    
+    def count_consecutive_wins(self) -> int:
+        """연속 승리 횟수"""
+        count = 0
+        for trade in reversed(self.trade_history):
+            if trade.get('profit_loss', 0) > 0:
+                count += 1
+            else:
+                break
+        return count
+    
+    def count_consecutive_losses(self) -> int:
+        """연속 손실 횟수"""
+        count = 0
+        for trade in reversed(self.trade_history):
+            if trade.get('profit_loss', 0) < 0:
+                count += 1
+            else:
+                break
+        return count
 
 # 백테스팅 시스템
 class BacktestEngine:
@@ -251,7 +378,7 @@ async def advanced_trading_strategy():
             
             # 고도화된 기술적 분석 및 거래 결정
             for symbol in ['BTC', 'ETH']:
-                signal = analyze_advanced_signal(symbol, bot.price_history[symbol])
+                signal = analyze_professional_signal(symbol, bot.price_history[symbol])
                 
                 if signal['action'] != 'hold' and signal['confidence'] > 0.65:
                     # 동적 리스크 관리
@@ -276,122 +403,251 @@ async def advanced_trading_strategy():
             print(f"트레이딩 에러: {e}")
             await asyncio.sleep(30)
 
-def analyze_advanced_signal(symbol: str, prices: list) -> dict:
-    """고도화된 기술적 분석 - 다중 지표 기반"""
+def analyze_professional_signal(symbol: str, prices: list, volumes: list = None) -> dict:
+    """프로급 20개 지표 기반 종합 분석"""
     try:
         if len(prices) < 50:
             return {'action': 'hold', 'confidence': 0.0, 'reasoning': 'insufficient_data'}
         
         current_price = prices[-1]
         
-        # 1. RSI (14기간)
-        rsi = calculate_rsi(prices, 14)
+        # 1. 전체 기술적 지표 계산
+        indicators = calculate_advanced_indicators(prices, volumes)
         
-        # 2. MACD
-        macd_line, signal_line, histogram = calculate_macd(prices)
+        # 2. 시장 심리 분석
+        sentiment = calculate_market_sentiment(prices, volumes)
         
-        # 3. 볼린져 밴드
-        bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(prices, 20)
+        # 3. 다중 시간대 분석
+        short_term_trend = analyze_trend(prices[-10:])  # 10기간 단기
+        medium_term_trend = analyze_trend(prices[-30:])  # 30기간 중기
+        long_term_trend = analyze_trend(prices[-50:])  # 50기간 장기
         
-        # 4. 다중 이동평균
-        sma_9 = sum(prices[-9:]) / 9
-        sma_21 = sum(prices[-21:]) / 21
-        sma_50 = sum(prices[-50:]) / 50
-        
-        # 5. 변동성 (최근 20기간)
-        volatility = calculate_volatility(prices[-20:])
-        
-        # 종합 시그널 분석
+        # 4. 신호 점수 시스템
         signals = []
         confidence_scores = []
         
-        # RSI 시그널
-        if rsi < 25:  # 강한 과매도
+        # RSI 다중 시간대 분석
+        if indicators.rsi_14 < 20 or indicators.rsi_7 < 15:  # 극도로 과매도
+            signals.append('strong_buy')
+            confidence_scores.append(0.9)
+        elif indicators.rsi_14 > 80 or indicators.rsi_7 > 85:  # 극도로 과매수
+            signals.append('strong_sell')
+            confidence_scores.append(0.9)
+        elif indicators.rsi_14 < 30:
             signals.append('buy')
-            confidence_scores.append(0.85)
-        elif rsi > 75:  # 강한 과매수
+            confidence_scores.append(0.7)
+        elif indicators.rsi_14 > 70:
             signals.append('sell')
-            confidence_scores.append(0.85)
-        elif rsi < 35:
-            signals.append('buy')
-            confidence_scores.append(0.6)
-        elif rsi > 65:
-            signals.append('sell')
-            confidence_scores.append(0.6)
+            confidence_scores.append(0.7)
         else:
-            signals.append('hold')
+            signals.append('neutral')
             confidence_scores.append(0.3)
         
-        # MACD 시그널
-        if macd_line > signal_line and histogram > 0:
-            signals.append('buy')
-            confidence_scores.append(0.7)
-        elif macd_line < signal_line and histogram < 0:
-            signals.append('sell')
-            confidence_scores.append(0.7)
+        # MACD 시그널 분석
+        if indicators.macd_histogram > 0 and indicators.macd_line > indicators.macd_signal:
+            if indicators.macd_histogram > abs(indicators.macd_line) * 0.1:  # 강한 상승 모멘텀
+                signals.append('strong_buy')
+                confidence_scores.append(0.85)
+            else:
+                signals.append('buy')
+                confidence_scores.append(0.65)
+        elif indicators.macd_histogram < 0 and indicators.macd_line < indicators.macd_signal:
+            if abs(indicators.macd_histogram) > abs(indicators.macd_line) * 0.1:  # 강한 하락 모멘텀
+                signals.append('strong_sell')
+                confidence_scores.append(0.85)
+            else:
+                signals.append('sell')
+                confidence_scores.append(0.65)
         else:
-            signals.append('hold')
+            signals.append('neutral')
             confidence_scores.append(0.2)
         
-        # 볼린져 밴드 시그널
-        if current_price <= bb_lower:  # 하단 밴드 근체
+        # 볼린져 밴드 + 변돐성 분석
+        bb_position = (current_price - indicators.bb_lower) / (indicators.bb_upper - indicators.bb_lower)
+        
+        if bb_position <= 0.1 and indicators.bb_width > 3:  # 하단 밴드 + 높은 변돐성
+            signals.append('strong_buy')
+            confidence_scores.append(0.8)
+        elif bb_position >= 0.9 and indicators.bb_width > 3:  # 상단 밴드 + 높은 변돐성
+            signals.append('strong_sell')
+            confidence_scores.append(0.8)
+        elif bb_position <= 0.2:
             signals.append('buy')
-            confidence_scores.append(0.75)
-        elif current_price >= bb_upper:  # 상단 밴드 근체
+            confidence_scores.append(0.6)
+        elif bb_position >= 0.8:
             signals.append('sell')
-            confidence_scores.append(0.75)
+            confidence_scores.append(0.6)
         else:
-            signals.append('hold')
+            signals.append('neutral')
             confidence_scores.append(0.25)
         
-        # 이동평균 정렬 시그널
-        if current_price > sma_9 > sma_21 > sma_50:  # 상승 정렬
+        # 스토카스틱 + 윌리엄스 %R 조합
+        if indicators.stochastic_k < 20 and indicators.williams_r < -80:
             signals.append('buy')
-            confidence_scores.append(0.8)
-        elif current_price < sma_9 < sma_21 < sma_50:  # 하락 정렬
+            confidence_scores.append(0.75)
+        elif indicators.stochastic_k > 80 and indicators.williams_r > -20:
             signals.append('sell')
-            confidence_scores.append(0.8)
+            confidence_scores.append(0.75)
         else:
-            signals.append('hold')
+            signals.append('neutral')
             confidence_scores.append(0.3)
         
-        # 변동성 기반 시그널 강도 조정
-        volatility_multiplier = min(1.2, max(0.8, 1 + (volatility - 0.02) * 5))
-        confidence_scores = [score * volatility_multiplier for score in confidence_scores]
+        # 이동평균 정렬 + 추세 세력 분석
+        ma_bullish = current_price > indicators.sma_20 > indicators.sma_50
+        ma_bearish = current_price < indicators.sma_20 < indicators.sma_50
         
-        # 최종 결정
-        buy_score = sum(score for sig, score in zip(signals, confidence_scores) if sig == 'buy')
-        sell_score = sum(score for sig, score in zip(signals, confidence_scores) if sig == 'sell')
-        hold_score = sum(score for sig, score in zip(signals, confidence_scores) if sig == 'hold')
+        trend_strength = abs(sentiment.trend_strength)
         
-        max_score = max(buy_score, sell_score, hold_score)
+        if ma_bullish and sentiment.trend_strength > 2 and trend_strength > 1:
+            signals.append('strong_buy')
+            confidence_scores.append(0.85)
+        elif ma_bearish and sentiment.trend_strength < -2 and trend_strength > 1:
+            signals.append('strong_sell')
+            confidence_scores.append(0.85)
+        elif ma_bullish:
+            signals.append('buy')
+            confidence_scores.append(0.6)
+        elif ma_bearish:
+            signals.append('sell')
+            confidence_scores.append(0.6)
+        else:
+            signals.append('neutral')
+            confidence_scores.append(0.3)
         
-        if max_score == buy_score and buy_score > 1.5:
+        # 모멘텀 + ATR 기반 변동성 분석
+        momentum_strong = abs(indicators.momentum) > 5
+        high_volatility = indicators.atr > current_price * 0.03
+        
+        if indicators.momentum > 5 and not high_volatility:
+            signals.append('buy')
+            confidence_scores.append(0.7)
+        elif indicators.momentum < -5 and not high_volatility:
+            signals.append('sell')
+            confidence_scores.append(0.7)
+        elif momentum_strong and high_volatility:
+            # 변동성이 높으면 신호 약화
+            signals.append('neutral')
+            confidence_scores.append(0.2)
+        else:
+            signals.append('neutral')
+            confidence_scores.append(0.35)
+        
+        # 지지/저항 수준 분석
+        near_support = abs(current_price - sentiment.support_level) / current_price < 0.02
+        near_resistance = abs(current_price - sentiment.resistance_level) / current_price < 0.02
+        
+        if near_support:
+            signals.append('buy')
+            confidence_scores.append(0.6)
+        elif near_resistance:
+            signals.append('sell')
+            confidence_scores.append(0.6)
+        
+        # 공포-탐욕 지수 반영
+        if sentiment.fear_greed_index < 25:  # 극도의 공포
+            signals.append('contrarian_buy')  # 역방향 매수
+            confidence_scores.append(0.7)
+        elif sentiment.fear_greed_index > 75:  # 극도의 탐욕
+            signals.append('contrarian_sell')  # 역방향 매도
+            confidence_scores.append(0.7)
+        
+        # 최종 시그널 통합 정리
+        signal_counts = {
+            'strong_buy': 0, 'buy': 0, 'neutral': 0, 'sell': 0, 'strong_sell': 0,
+            'contrarian_buy': 0, 'contrarian_sell': 0
+        }
+        
+        total_confidence = 0
+        
+        for i, signal in enumerate(signals):
+            if signal in signal_counts:
+                signal_counts[signal] += confidence_scores[i]
+                total_confidence += confidence_scores[i]
+        
+        # 최종 시그널 결정 (가중 점수 방식)
+        strong_buy_score = signal_counts.get('strong_buy', 0) * 1.5
+        buy_score = signal_counts.get('buy', 0) + strong_buy_score
+        contrarian_buy_score = signal_counts.get('contrarian_buy', 0) * 1.2
+        
+        strong_sell_score = signal_counts.get('strong_sell', 0) * 1.5
+        sell_score = signal_counts.get('sell', 0) + strong_sell_score
+        contrarian_sell_score = signal_counts.get('contrarian_sell', 0) * 1.2
+        
+        neutral_score = signal_counts.get('neutral', 0)
+        
+        # 역방향 지표 반영
+        final_buy_score = buy_score + contrarian_buy_score
+        final_sell_score = sell_score + contrarian_sell_score
+        
+        max_score = max(final_buy_score, final_sell_score, neutral_score)
+        
+        if max_score == final_buy_score and final_buy_score > 2.0:
             action = 'buy'
-            confidence = min(buy_score / 4, 0.95)
-        elif max_score == sell_score and sell_score > 1.5:
+            confidence = min(final_buy_score / 6, 0.95)
+        elif max_score == final_sell_score and final_sell_score > 2.0:
             action = 'sell'
-            confidence = min(sell_score / 4, 0.95)
+            confidence = min(final_sell_score / 6, 0.95)
         else:
             action = 'hold'
-            confidence = 0.2
+            confidence = max(0.15, neutral_score / max(1, total_confidence))
+        
+        # 변동성 기반 신뢰도 조정
+        volatility_factor = min(1.3, max(0.7, 1 + (sentiment.volatility_index - 20) / 50))
+        confidence *= volatility_factor
+        
+        # 상세 신호 정보 구성
+        trend_direction = "Strong Up" if sentiment.trend_strength > 3 else "Up" if sentiment.trend_strength > 0 else "Strong Down" if sentiment.trend_strength < -3 else "Down"
         
         return {
             'action': action,
             'confidence': confidence,
-            'reasoning': f'RSI:{rsi:.1f}, MACD:{macd_line:.2f}, BB:{(current_price-bb_lower)/(bb_upper-bb_lower)*100:.1f}%, Trend:{"Up" if sma_9 > sma_21 else "Down"}, Vol:{volatility:.3f}',
+            'reasoning': f'20-Indicator Analysis: RSI14:{indicators.rsi_14:.1f}/RSI7:{indicators.rsi_7:.1f}, MACD:{indicators.macd_histogram:.3f}, BB:{bb_position*100:.1f}%, Stoch:{indicators.stochastic_k:.1f}, Williams:{indicators.williams_r:.1f}, Trend:{trend_direction}, Momentum:{indicators.momentum:.2f}%, Vol:{sentiment.volatility_index:.1f}%, F&G:{sentiment.fear_greed_index:.0f}',
             'technical_data': {
-                'rsi': rsi,
-                'macd': macd_line,
-                'bb_position': (current_price - bb_lower) / (bb_upper - bb_lower),
-                'trend_strength': abs(sma_9 - sma_21) / sma_21,
-                'volatility': volatility
+                'indicators': asdict(indicators),
+                'sentiment': asdict(sentiment),
+                'signal_breakdown': signal_counts,
+                'trend_analysis': {
+                    'short_term': short_term_trend,
+                    'medium_term': medium_term_trend,
+                    'long_term': long_term_trend
+                },
+                'key_levels': {
+                    'support': sentiment.support_level,
+                    'resistance': sentiment.resistance_level,
+                    'current': current_price
+                }
+            },
+            'risk_assessment': {
+                'volatility_risk': 'High' if sentiment.volatility_index > 30 else 'Medium' if sentiment.volatility_index > 15 else 'Low',
+                'trend_consistency': 'Strong' if abs(sentiment.trend_strength) > 2 else 'Moderate' if abs(sentiment.trend_strength) > 1 else 'Weak',
+                'market_phase': 'Oversold' if sentiment.fear_greed_index < 30 else 'Overbought' if sentiment.fear_greed_index > 70 else 'Neutral'
             }
         }
         
     except Exception as e:
-        print(f"분서 에러 ({symbol}): {e}")
-        return {'action': 'hold', 'confidence': 0.0, 'reasoning': 'analysis_error'}
+        logger.error(f"전문가 분석 에러 ({symbol}): {e}")
+        return {'action': 'hold', 'confidence': 0.0, 'reasoning': f'analysis_error: {str(e)}'}
+
+def analyze_trend(prices: list) -> str:
+    """추세 분석"""
+    if len(prices) < 3:
+        return 'insufficient_data'
+    
+    first_third = np.mean(prices[:len(prices)//3])
+    last_third = np.mean(prices[len(prices)//3*2:])
+    
+    change = (last_third - first_third) / first_third * 100
+    
+    if change > 2:
+        return 'strong_uptrend'
+    elif change > 0.5:
+        return 'uptrend'
+    elif change < -2:
+        return 'strong_downtrend'
+    elif change < -0.5:
+        return 'downtrend'
+    else:
+        return 'sideways'
 
 def calculate_rsi(prices: list, period: int = 14) -> float:
     """정확한 RSI 계산"""
@@ -464,6 +720,197 @@ def calculate_volatility(prices: list) -> float:
     variance = sum((r - avg_return) ** 2 for r in returns) / len(returns)
     
     return variance ** 0.5
+
+def calculate_advanced_indicators(prices: list, volumes: list = None) -> AdvancedTechnicalIndicators:
+    """전문가급 기술적 지표 전체 계산"""
+    if len(prices) < 50:
+        # 기본값 반환
+        current_price = prices[-1] if prices else 50000
+        return AdvancedTechnicalIndicators(
+            rsi_14=50, rsi_7=50, sma_20=current_price, sma_50=current_price,
+            ema_12=current_price, ema_26=current_price, macd_line=0, macd_signal=0, macd_histogram=0,
+            bb_upper=current_price*1.02, bb_middle=current_price, bb_lower=current_price*0.98, bb_width=4,
+            stochastic_k=50, stochastic_d=50, williams_r=-50, atr=current_price*0.02,
+            volume_sma=1000000, price_volume_trend=0, momentum=0
+        )
+    
+    prices_array = np.array(prices)
+    current_price = prices[-1]
+    
+    # RSI 계산 (14기간, 7기간)
+    rsi_14 = calculate_rsi(prices, 14)
+    rsi_7 = calculate_rsi(prices, 7)
+    
+    # 이동평균
+    sma_20 = np.mean(prices_array[-20:]) if len(prices) >= 20 else current_price
+    sma_50 = np.mean(prices_array[-50:]) if len(prices) >= 50 else current_price
+    
+    # 지수이동평균 (EMA)
+    ema_12 = calculate_ema(prices, 12)
+    ema_26 = calculate_ema(prices, 26)
+    
+    # MACD
+    macd_line = ema_12 - ema_26
+    macd_signal = calculate_ema([macd_line] * 9, 9)  # 단순화
+    macd_histogram = macd_line - macd_signal
+    
+    # 볼린져 밴드
+    bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(prices, 20, 2.0)
+    bb_width = ((bb_upper - bb_lower) / bb_middle) * 100
+    
+    # 스토카스틱
+    stoch_k, stoch_d = calculate_stochastic(prices, 14)
+    
+    # Williams %R
+    williams_r = calculate_williams_r(prices, 14)
+    
+    # ATR (Average True Range)
+    atr = calculate_atr(prices, 14)
+    
+    # 볼륨 지표
+    volume_sma = np.mean(volumes[-20:]) if volumes and len(volumes) >= 20 else 1000000
+    
+    # Price Volume Trend
+    pvt = calculate_pvt(prices, volumes) if volumes else 0
+    
+    # 모멘텀
+    momentum = ((current_price - prices[-10]) / prices[-10]) * 100 if len(prices) >= 10 else 0
+    
+    return AdvancedTechnicalIndicators(
+        rsi_14=rsi_14, rsi_7=rsi_7, sma_20=sma_20, sma_50=sma_50,
+        ema_12=ema_12, ema_26=ema_26, macd_line=macd_line, macd_signal=macd_signal, macd_histogram=macd_histogram,
+        bb_upper=bb_upper, bb_middle=bb_middle, bb_lower=bb_lower, bb_width=bb_width,
+        stochastic_k=stoch_k, stochastic_d=stoch_d, williams_r=williams_r, atr=atr,
+        volume_sma=volume_sma, price_volume_trend=pvt, momentum=momentum
+    )
+
+def calculate_ema(prices: list, period: int) -> float:
+    """지수이동평균 계산"""
+    if len(prices) < period:
+        return prices[-1] if prices else 0
+    
+    multiplier = 2 / (period + 1)
+    ema = prices[0]
+    
+    for price in prices[1:]:
+        ema = (price * multiplier) + (ema * (1 - multiplier))
+    
+    return ema
+
+def calculate_stochastic(prices: list, period: int = 14) -> Tuple[float, float]:
+    """스토카스틱 계산"""
+    if len(prices) < period:
+        return 50.0, 50.0
+    
+    recent_prices = prices[-period:]
+    current_price = prices[-1]
+    
+    lowest_low = min(recent_prices)
+    highest_high = max(recent_prices)
+    
+    if highest_high == lowest_low:
+        k_percent = 50.0
+    else:
+        k_percent = ((current_price - lowest_low) / (highest_high - lowest_low)) * 100
+    
+    # %D는 %K의 3기간 이동평균 (단순화)
+    d_percent = k_percent  # 단순화
+    
+    return k_percent, d_percent
+
+def calculate_williams_r(prices: list, period: int = 14) -> float:
+    """윌리엄스 %R 계산"""
+    if len(prices) < period:
+        return -50.0
+    
+    recent_prices = prices[-period:]
+    current_price = prices[-1]
+    
+    highest_high = max(recent_prices)
+    lowest_low = min(recent_prices)
+    
+    if highest_high == lowest_low:
+        return -50.0
+    
+    williams_r = ((highest_high - current_price) / (highest_high - lowest_low)) * -100
+    return williams_r
+
+def calculate_atr(prices: list, period: int = 14) -> float:
+    """평균 진학범위 (ATR) 계산"""
+    if len(prices) < period + 1:
+        return prices[-1] * 0.02 if prices else 1000  # 2% 기본값
+    
+    true_ranges = []
+    
+    for i in range(1, len(prices)):
+        high = prices[i]
+        low = prices[i]
+        prev_close = prices[i-1]
+        
+        tr = max(
+            high - low,
+            abs(high - prev_close),
+            abs(low - prev_close)
+        )
+        true_ranges.append(tr)
+    
+    # 최근 period 기간 평균
+    if len(true_ranges) >= period:
+        atr = sum(true_ranges[-period:]) / period
+    else:
+        atr = sum(true_ranges) / len(true_ranges) if true_ranges else prices[-1] * 0.02
+    
+    return atr
+
+def calculate_pvt(prices: list, volumes: list) -> float:
+    """가격 볼륨 추세 (PVT) 계산"""
+    if not volumes or len(prices) < 2 or len(volumes) < 2:
+        return 0.0
+    
+    pvt = 0
+    
+    for i in range(1, min(len(prices), len(volumes))):
+        price_change = (prices[i] - prices[i-1]) / prices[i-1]
+        pvt += price_change * volumes[i]
+    
+    return pvt
+
+def calculate_market_sentiment(prices: list, volume: list = None) -> MarketSentiment:
+    """시장 심리 분석"""
+    if len(prices) < 20:
+        return MarketSentiment(
+            fear_greed_index=50,
+            volatility_index=20,
+            trend_strength=0,
+            support_level=prices[-1] * 0.95 if prices else 45000,
+            resistance_level=prices[-1] * 1.05 if prices else 55000
+        )
+    
+    current_price = prices[-1]
+    
+    # 공포-탐욕 지수 (단순 모델)
+    rsi = calculate_rsi(prices, 14)
+    fear_greed = rsi  # RSI를 공포-탐욕 지수로 활용
+    
+    # 변동성 지수
+    volatility = calculate_volatility(prices[-20:]) * 100
+    
+    # 트렌드 강도
+    sma_20 = sum(prices[-20:]) / 20
+    trend_strength = ((current_price - sma_20) / sma_20) * 100
+    
+    # 지지/저항 수준
+    recent_prices = prices[-50:] if len(prices) >= 50 else prices
+    support_level = min(recent_prices) * 1.01  # 1% 마진
+    resistance_level = max(recent_prices) * 0.99  # 1% 마진
+    
+    return MarketSentiment(
+        fear_greed_index=fear_greed,
+        volatility_index=volatility,
+        trend_strength=trend_strength,
+        support_level=support_level,
+        resistance_level=resistance_level
+    )
 
 def calculate_position_size(signal: dict, balance: float) -> float:
     """동적 포지션 사이징 (Kelly Criterion 반영)"""
