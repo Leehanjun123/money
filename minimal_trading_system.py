@@ -1523,8 +1523,9 @@ async def dashboard():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Minimal Trading Bot</title>
+        <title>AI Trading Bot</title>
         <meta charset="utf-8">
+        <link rel="icon" href="data:,">
         <style>
             body {{
                 font-family: Arial, sans-serif;
@@ -1657,7 +1658,8 @@ async def dashboard():
             let ws;
             
             function connectWebSocket() {{
-                ws = new WebSocket(`ws://${{location.host}}/ws`);
+                const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                ws = new WebSocket(`${{protocol}}//${{location.host}}/ws`);
                 
                 ws.onmessage = function(event) {{
                     const data = JSON.parse(event.data);
@@ -1709,6 +1711,11 @@ async def health_check():
     """헬스체크 - Railway 필수"""
     # Railway는 200 응답만 확인하므로 단순하게 유지
     return {"status": "healthy"}
+
+@app.get("/favicon.ico")
+async def favicon():
+    """파비콘 404 오류 방지"""
+    return {"status": "no favicon"}
 
 @app.get("/api/status")
 async def get_status():
