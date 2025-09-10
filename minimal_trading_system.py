@@ -110,6 +110,7 @@ class TradingBot:
     
     def stop(self):
         self.running = False
+        self.start_time = datetime.now()  # 가동시간 리셋
     
     def get_status(self):
         uptime = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
@@ -1659,16 +1660,30 @@ async def dashboard():
             
             function connectWebSocket() {{
                 const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-                ws = new WebSocket(`${{protocol}}//${{location.host}}/ws`);
-                
-                ws.onmessage = function(event) {{
-                    const data = JSON.parse(event.data);
-                    updateDashboard(data);
-                }};
-                
-                ws.onclose = function() {{
-                    setTimeout(connectWebSocket, 1000);
-                }};
+                try {{
+                    ws = new WebSocket(`${{protocol}}//${{location.host}}/ws`);
+                    
+                    ws.onopen = function() {{
+                        console.log('WebSocket connected');
+                    }};
+                    
+                    ws.onmessage = function(event) {{
+                        const data = JSON.parse(event.data);
+                        updateDashboard(data);
+                    }};
+                    
+                    ws.onerror = function(error) {{
+                        console.error('WebSocket error:', error);
+                    }};
+                    
+                    ws.onclose = function() {{
+                        console.log('WebSocket disconnected, reconnecting...');
+                        setTimeout(connectWebSocket, 3000);
+                    }};
+                }} catch (error) {{
+                    console.error('Failed to connect WebSocket:', error);
+                    setTimeout(connectWebSocket, 3000);
+                }}
             }}
             
             function updateDashboard(data) {{
