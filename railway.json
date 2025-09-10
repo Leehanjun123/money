@@ -4,40 +4,10 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python admin_dashboard.py",
-    "healthcheckPath": "/health",
-    "healthcheckTimeout": 100,
+    "startCommand": "python minimal_trading_system.py",
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  },
-  "services": [
-    {
-      "name": "trader-bot",
-      "source": {
-        "repo": "https://github.com/yourusername/hypersonic-trader"
-      },
-      "envVars": {
-        "BINANCE_API_KEY": {
-          "type": "secret"
-        },
-        "BINANCE_SECRET": {
-          "type": "secret"
-        },
-        "COINBASE_API_KEY": {
-          "type": "secret"
-        },
-        "COINBASE_SECRET": {
-          "type": "secret"
-        },
-        "OPENAI_API_KEY": {
-          "type": "secret"
-        }
-      },
-      "healthcheck": {
-        "path": "/health",
-        "port": 8000,
-        "type": "http"
-      }
-    }
-  ]
+    "restartPolicyMaxRetries": 3,
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30
+  }
 }

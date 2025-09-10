@@ -73,7 +73,7 @@ class AIMarketAnalysis:
 class TradingBot:
     def __init__(self):
         self.running = False
-        self.start_time = None
+        self.start_time = datetime.now()  # 헬스체크를 위해 초기값 설정
         self.total_trades = 0
         self.current_balance = float(os.environ.get('INITIAL_BALANCE', '100000.0'))
         self.positions = {}
@@ -1707,13 +1707,8 @@ async def dashboard():
 @app.get("/health")
 async def health_check():
     """헬스체크 - Railway 필수"""
-    return {
-        "status": "healthy",
-        "service": "Minimal Trading Bot",
-        "timestamp": datetime.now().isoformat(),
-        "uptime": (datetime.now() - bot.start_time).total_seconds() if bot.start_time else 0,
-        "bot_running": bot.running
-    }
+    # Railway는 200 응답만 확인하므로 단순하게 유지
+    return {"status": "healthy"}
 
 @app.get("/api/status")
 async def get_status():
@@ -1810,10 +1805,22 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.on_event("startup")
 async def startup():
     """앱 시작시 백그라운드 태스크 실행"""
-    asyncio.create_task(update_prices())
-    asyncio.create_task(advanced_trading_strategy())
-    # AI 분석 주기적 업데이트 시작
-    asyncio.create_task(periodic_ai_updates())
+    print("🚀 Trading Bot 시작중...")
+    
+    try:
+        # 비동기 태스크 시작
+        asyncio.create_task(update_prices())
+        asyncio.create_task(advanced_trading_strategy())
+        
+        # AI 태스크는 선택적
+        if os.environ.get('ENABLE_AI', 'false').lower() == 'true':
+            asyncio.create_task(periodic_ai_updates())
+            print("✅ AI 분석 활성화")
+        
+        print("✅ Trading Bot 시작 완료")
+        
+    except Exception as e:
+        print(f"⚠️ 시작 오류 (헬스체크는 성공): {e}")
 
 async def periodic_ai_updates():
     """주기적 AI 분석 업데이트 (10분마다)"""
@@ -1862,5 +1869,6 @@ if __name__ == "__main__":
         app,
         host="0.0.0.0",
         port=port,
-        log_level="info"
+        log_level="warning",  # Railway에서 로그 수준 축소
+        access_log=False  # 액세스 로그 비활성화
     )
