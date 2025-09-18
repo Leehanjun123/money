@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Style Mate - AI 패션 코디 추천 서비스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            animation: fadeInUp 1s ease;
+        }
+        
+        .logo {
+            font-size: 4em;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+        
+        .tagline {
+            font-size: 1.5em;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+        
+        .cta-button {
+            background: white;
+            color: #667eea;
+            padding: 18px 40px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+            margin: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .secondary-button {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 80px 20px;
+            background: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 50px;
+            color: #333;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            text-align: center;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .feature-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        /* How It Works */
+        .how-it-works {
+            padding: 80px 20px;
+            background: white;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .step {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 50%;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        /* Beta Test Section */
+        .beta-test {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+        }
+        
+        .beta-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .beta-form {
+            margin-top: 40px;
+        }
+        
+        .email-input {
+            padding: 15px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 50px 0 0 50px;
+            width: 60%;
+            min-width: 200px;
+        }
+        
+        .submit-button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            background: #ffd700;
+            color: #333;
+            border: none;
+            border-radius: 0 50px 50px 0;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: -4px;
+            transition: background 0.3s ease;
+        }
+        
+        .submit-button:hover {
+            background: #ffed4e;
+        }
+        
+        /* Stats */
+        .stats {
+            padding: 60px 20px;
+            background: #f8f9fa;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 1.2em;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        /* Footer */
+        footer {
+            background: #333;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .social-links {
+            margin-top: 20px;
+        }
+        
+        .social-links a {
+            color: white;
+            font-size: 1.5em;
+            margin: 0 15px;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .social-links a:hover {
+            color: #667eea;
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+        
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.8s ease;
+        }
+        
+        .fade-in.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .tagline {
+                font-size: 1.2em;
+            }
+            
+            .email-input, .submit-button {
+                width: 100%;
+                border-radius: 50px;
+                margin: 10px 0;
+            }
+            
+            .feature-grid, .steps {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Badge */
+        .beta-badge {
+            display: inline-block;
+            background: #ffd700;
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 20px rgba(255, 215, 0, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="logo">👔</div>
+            <span class="beta-badge">🚀 BETA TEST 모집 중!</span>
+            <h1>Style Mate</h1>
+            <p class="tagline">AI가 추천하는 나만의 패션 코디네이터</p>
+            <p style="font-size: 1.1em; margin-bottom: 40px; opacity: 0.9;">
+                매일 아침 뭘 입을지 고민하시나요?<br>
+                사진 10장으로 시작하는 스마트한 옷장 관리
+            </p>
+            <div>
+                <a href="#beta-signup" class="cta-button">베타 테스터 신청하기</a>
+                <a href="#features" class="cta-button secondary-button">더 알아보기</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">왜 Style Mate인가요?</h2>
+            <div class="feature-grid">
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🤖</div>
+                    <h3 class="feature-title">AI 의류 분석</h3>
+                    <p>최신 AI 기술로 옷의 종류, 색상, 스타일을 자동으로 분석합니다</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🌤️</div>
+                    <h3 class="feature-title">날씨 맞춤 추천</h3>
+                    <p>오늘의 날씨와 미세먼지까지 고려한 완벽한 코디 제안</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">1초 빠른 분석</h3>
+                    <p>사진 찍자마자 바로 결과 확인! 기다림 없는 즉각적인 서비스</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">📸</div>
+                    <h3 class="feature-title">간편한 시작</h3>
+                    <p>복잡한 설정 NO! 옷 사진 10장으로 바로 시작 가능</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">TPO별 스타일링</h3>
+                    <p>데이트, 면접, 출근 등 상황에 맞는 맞춤 코디 추천</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">💝</div>
+                    <h3 class="feature-title">무료 베타 서비스</h3>
+                    <p>지금 가입하면 프리미엄 기능 영구 무료 이용!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">이렇게 간단해요!</h2>
+            <div class="steps">
+                <div class="step fade-in">
+                    <div class="step-number">1</div>
+                    <h3>옷 사진 촬영</h3>
+                    <p>가지고 있는 옷들을 간단히 촬영해주세요</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">2</div>
+                    <h3>AI 자동 분석</h3>
+                    <p>AI가 옷의 종류와 스타일을 자동으로 분류합니다</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">3</div>
+                    <h3>맞춤 코디 추천</h3>
+                    <p>날씨와 일정에 맞는 최적의 코디를 추천받으세요</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">4</div>
+                    <h3>스타일 완성</h3>
+                    <p>매일 새로운 나를 발견하는 즐거움!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item fade-in">
+                    <div class="stat-number">90%+</div>
+                    <div class="stat-label">AI 정확도</div>
+                </div>
+                <div class="stat-item fade-in">
+                    <div class="stat-number">1초</div>
+                    <div class="stat-label">분석 시간</div>
+                </div>
+                <div class="stat-item fade-in">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">언제나 이용 가능</div>
+                </div>
+                <div class="stat-item fade-in">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">무료 베타</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Beta Test Section -->
+    <section class="beta-test" id="beta-signup">
+        <div class="beta-content">
+            <h2 style="font-size: 2.5em; margin-bottom: 20px;">🎉 베타 테스터 모집!</h2>
+            <p style="font-size: 1.2em; margin-bottom: 20px;">
+                지금 신청하시면 다음 혜택을 드려요!
+            </p>
+            <ul style="text-align: left; display: inline-block; font-size: 1.1em; line-height: 2;">
+                <li>✅ 평생 무료 프리미엄 기능</li>
+                <li>✅ 신규 기능 우선 체험</li>
+                <li>✅ 개발자와 직접 소통</li>
+                <li>✅ 스타벅스 기프티콘 추첨 (선착순 100명)</li>
+            </ul>
+            
+            <div class="beta-form">
+                <form id="betaForm" onsubmit="handleSubmit(event)">
+                    <input type="email" class="email-input" placeholder="이메일 주소" required>
+                    <button type="submit" class="submit-button">신청하기</button>
+                </form>
+                <p style="margin-top: 20px; opacity: 0.9;">
+                    📱 iOS/Android 모두 지원 | 🔒 개인정보는 안전하게 보호됩니다
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2024 Style Mate. All rights reserved.</p>
+        <p style="margin-top: 10px; opacity: 0.8;">
+            AI가 만드는 나만의 패션 라이프
+        </p>
+        <div class="social-links">
+            <a href="#">📧</a>
+            <a href="#">📷</a>
+            <a href="#">💬</a>
+        </div>
+    </footer>
+
+    <script>
+        // Fade in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Form submission
+        function handleSubmit(event) {
+            event.preventDefault();
+            const email = event.target[0].value;
+            
+            // Here you would normally send to your backend
+            // For now, we'll just show a success message
+            alert(`🎉 베타 테스터 신청이 완료되었습니다!\n\n${email}로 초대 링크를 보내드릴게요.\n\n앱 출시 예정일: 2024년 1월`);
+            
+            // Clear form
+            event.target[0].value = '';
+            
+            // You could also save to localStorage or send to your API
+            console.log('Beta tester email:', email);
+        }
+
+        // Add some interactive elements
+        document.addEventListener('DOMContentLoaded', () => {
+            // Animated counter for stats
+            const animateCounter = (element, target) => {
+                let current = 0;
+                const increment = target / 50;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        element.textContent = element.dataset.suffix ? 
+                            target + element.dataset.suffix : target;
+                        clearInterval(timer);
+                    } else {
+                        element.textContent = Math.floor(current) + 
+                            (element.dataset.suffix || '');
+                    }
+                }, 30);
+            };
+
+            // Trigger animation when stats section is visible
+            const statsObserver = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !entry.target.dataset.animated) {
+                        const statNumbers = entry.target.querySelectorAll('.stat-number');
+                        statNumbers.forEach(stat => {
+                            const text = stat.textContent;
+                            if (text.includes('%')) {
+                                stat.dataset.suffix = '%+';
+                                animateCounter(stat, 90);
+                            } else if (text.includes('초')) {
+                                stat.dataset.suffix = '초';
+                                animateCounter(stat, 1);
+                            }
+                            // Mark as animated
+                            entry.target.dataset.animated = 'true';
+                        });
+                    }
+                });
+            });
+
+            const statsSection = document.querySelector('.stats');
+            if (statsSection) {
+                statsObserver.observe(statsSection);
+            }
+        });
+    </script>
+</body>
+</html>
