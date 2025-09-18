@@ -19,5 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application
 COPY . .
 
+# Make start script executable
+RUN chmod +x start.sh
+
 # Railway sets PORT env var
-CMD python main_production.py
+CMD ["./start.sh"]
