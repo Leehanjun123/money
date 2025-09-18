@@ -1,1 +1,0 @@
-web: python minimal_trading_system.py
