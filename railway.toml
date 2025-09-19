@@ -9,7 +9,7 @@ restartPolicyMaxRetries = 3
 
 [[deploy.environmentVariables]]
 name = "DJANGO_SETTINGS_MODULE"
-value = "stylemate.settings"
+value = "settings_simple"
 
 [[deploy.environmentVariables]]
 name = "DEBUG"
