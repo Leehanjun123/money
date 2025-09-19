@@ -54,11 +54,11 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.kakao',
     'drf_spectacular',
     
-    # Local apps
-    'api',
-    'accounts',
-    'wardrobe',
-    'crawler',
+    # Local apps (temporarily disabled for Railway deployment)
+    # 'api',
+    # 'accounts',
+    # 'wardrobe',
+    # 'crawler',
 ]
 
 MIDDLEWARE = [

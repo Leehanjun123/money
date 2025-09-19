@@ -10,9 +10,23 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 def health_check(request):
+    try:
+        # 간단한 헬스체크 - 데이터베이스 연결 등 확인하지 않음
+        return JsonResponse({
+            'status': 'healthy',
+            'service': 'StyleMate Backend',
+            'version': '1.0.0'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'error': str(e)
+        }, status=500)
+
+def api_test(request):
     return JsonResponse({
-        'status': 'healthy',
-        'service': 'StyleMate Backend',
+        'message': 'StyleMate API is working!',
+        'status': 'success',
         'version': '1.0.0'
     })
 
@@ -20,11 +34,14 @@ urlpatterns = [
     path('', health_check, name='health_check'),
     path('admin/', admin.site.urls),
     
-    # API URLs
-    path('api/', include('api.urls')),
-    path('api/accounts/', include('accounts.urls')),
-    path('api/wardrobe/', include('wardrobe.urls')),
-    path('api/shop/', include('crawler.urls')),
+    # API URLs (temporarily disabled for Railway deployment)  
+    # path('api/', include('api.urls')),
+    # path('api/accounts/', include('accounts.urls')),
+    # path('api/wardrobe/', include('wardrobe.urls')),
+    # path('api/shop/', include('crawler.urls')),
+    
+    # Temporary API test endpoint
+    path('api/', api_test, name='api_test'),
     
     # JWT Authentication
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
