@@ -8,6 +8,10 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
 [[deploy.environmentVariables]]
+name = "DJANGO_SETTINGS_MODULE"
+value = "stylemate.settings"
+
+[[deploy.environmentVariables]]
 name = "DEBUG"
 value = "False"
 
