@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Style Mate - 베타 신청 모니터</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: slideUp 0.5s ease;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .applications-table {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .table-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .refresh-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .refresh-btn:hover {
+            opacity: 0.9;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .badge-ios {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .badge-android {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .badge-both {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+        
+        .time-ago {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .chart-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .chart-label {
+            width: 80px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .chart-progress {
+            flex: 1;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+        
+        .chart-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 15px;
+            transition: width 1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.85em;
+        }
+        
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #4caf50;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 0.9em;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👔 Style Mate 베타 모니터</h1>
+            <p><span class="live-indicator"></span>실시간 업데이트</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">총 신청자</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todayCount">0</div>
+                <div class="stat-label">오늘 신청</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="iosCount">0</div>
+                <div class="stat-label">iOS 사용자</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="androidCount">0</div>
+                <div class="stat-label">Android 사용자</div>
+            </div>
+        </div>
+        
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">연령대 분포</div>
+                <div id="ageChart"></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">패션 관심도</div>
+                <div id="interestChart"></div>
+            </div>
+        </div>
+        
+        <div class="applications-table">
+            <div class="table-header">
+                <div class="table-title">신청자 목록</div>
+                <button class="refresh-btn" onclick="loadApplications()">🔄 새로고침</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>번호</th>
+                        <th>이름</th>
+                        <th>이메일</th>
+                        <th>디바이스</th>
+                        <th>연령대</th>
+                        <th>패션 관심도</th>
+                        <th>신청 시간</th>
+                    </tr>
+                </thead>
+                <tbody id="applicationsBody">
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <div>아직 신청자가 없습니다</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'https://money-production-452c.up.railway.app';
+        
+        async function loadApplications() {
+            try {
+                // 실제 서버에서 데이터 가져오기
+                const response = await fetch(`${API_URL}/api/beta-applications`);
+                const data = await response.json();
+                
+                const applications = data.applications || [];
+                const stats = data.stats || {};
+                
+                // 통계 업데이트 (서버 데이터 사용)
+                updateStatsFromServer(stats);
+                
+                // 차트 업데이트
+                updateChartsFromServer(stats);
+                
+                // 테이블 업데이트
+                updateTable(applications);
+            } catch (error) {
+                console.error('Error loading applications:', error);
+                // 폴백: localStorage 데이터 사용
+                const localApps = JSON.parse(localStorage.getItem('betaApplications') || '[]');
+                updateStats(localApps);
+                updateCharts(localApps);
+                updateTable(localApps);
+            }
+        }
+        
+        function updateStatsFromServer(stats) {
+            document.getElementById('totalCount').textContent = stats.total || 0;
+            document.getElementById('todayCount').textContent = stats.today || 0;
+            document.getElementById('iosCount').textContent = stats.ios || 0;
+            document.getElementById('androidCount').textContent = stats.android + stats.both || 0;
+        }
+        
+        function updateChartsFromServer(stats) {
+            // 연령대 차트
+            const ageChart = document.getElementById('ageChart');
+            ageChart.innerHTML = '';
+            
+            const ageData = stats.by_age || {};
+            const totalApps = stats.total || 1;
+            
+            Object.entries(ageData).forEach(([age, count]) => {
+                if (age !== 'unknown' && count > 0) {
+                    const percentage = (count / totalApps * 100).toFixed(0);
+                    ageChart.innerHTML += `
+                        <div class="chart-bar">
+                            <div class="chart-label">${age}</div>
+                            <div class="chart-progress">
+                                <div class="chart-fill" style="width: ${percentage}%">${count}명</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            // 관심도 차트
+            const interestChart = document.getElementById('interestChart');
+            interestChart.innerHTML = '';
+            
+            const interestData = stats.by_interest || {};
+            const interestLabels = {
+                'very-high': '매우 높음',
+                'high': '높음',
+                'medium': '보통',
+                'low': '낮음'
+            };
+            
+            Object.entries(interestData).forEach(([level, count]) => {
+                if (level !== 'unknown' && count > 0) {
+                    const percentage = (count / totalApps * 100).toFixed(0);
+                    interestChart.innerHTML += `
+                        <div class="chart-bar">
+                            <div class="chart-label">${interestLabels[level] || level}</div>
+                            <div class="chart-progress">
+                                <div class="chart-fill" style="width: ${percentage}%">${count}명</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        function updateStats(applications) {
+            const total = applications.length;
+            const today = applications.filter(app => {
+                const appDate = new Date(app.timestamp).toDateString();
+                const todayDate = new Date().toDateString();
+                return appDate === todayDate;
+            }).length;
+            
+            const ios = applications.filter(app => app.device === 'iOS').length;
+            const android = applications.filter(app => app.device === 'Android').length;
+            
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('todayCount').textContent = today;
+            document.getElementById('iosCount').textContent = ios;
+            document.getElementById('androidCount').textContent = android;
+        }
+        
+        function updateCharts(applications) {
+            // 연령대 차트
+            const ageData = {};
+            applications.forEach(app => {
+                ageData[app.age] = (ageData[app.age] || 0) + 1;
+            });
+            
+            const ageChart = document.getElementById('ageChart');
+            ageChart.innerHTML = '';
+            Object.entries(ageData).forEach(([age, count]) => {
+                const percentage = (count / applications.length * 100).toFixed(0);
+                ageChart.innerHTML += `
+                    <div class="chart-bar">
+                        <div class="chart-label">${age}</div>
+                        <div class="chart-progress">
+                            <div class="chart-fill" style="width: ${percentage}%">${count}명</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // 관심도 차트
+            const interestData = {
+                'very-high': 0,
+                'high': 0,
+                'medium': 0,
+                'low': 0
+            };
+            applications.forEach(app => {
+                if (app.fashionInterest) {
+                    interestData[app.fashionInterest]++;
+                }
+            });
+            
+            const interestChart = document.getElementById('interestChart');
+            interestChart.innerHTML = '';
+            const interestLabels = {
+                'very-high': '매우 높음',
+                'high': '높음',
+                'medium': '보통',
+                'low': '낮음'
+            };
+            
+            Object.entries(interestData).forEach(([level, count]) => {
+                if (count > 0) {
+                    const percentage = (count / applications.length * 100).toFixed(0);
+                    interestChart.innerHTML += `
+                        <div class="chart-bar">
+                            <div class="chart-label">${interestLabels[level]}</div>
+                            <div class="chart-progress">
+                                <div class="chart-fill" style="width: ${percentage}%">${count}명</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        function updateTable(applications) {
+            const tbody = document.getElementById('applicationsBody');
+            
+            if (applications.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <div>아직 신청자가 없습니다</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // 최신 순으로 정렬
+            applications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            tbody.innerHTML = applications.map((app, index) => {
+                const deviceBadgeClass = app.device === 'iOS' ? 'badge-ios' : 
+                                        app.device === 'Android' ? 'badge-android' : 'badge-both';
+                
+                const interestLabels = {
+                    'very-high': '매우 높음',
+                    'high': '높음',
+                    'medium': '보통',
+                    'low': '낮음'
+                };
+                
+                const timeAgo = getTimeAgo(new Date(app.timestamp));
+                
+                return `
+                    <tr>
+                        <td>${applications.length - index}</td>
+                        <td>${app.name}</td>
+                        <td>${app.email}</td>
+                        <td><span class="badge ${deviceBadgeClass}">${app.device}</span></td>
+                        <td>${app.age}</td>
+                        <td>${interestLabels[app.fashionInterest] || '-'}</td>
+                        <td class="time-ago">${timeAgo}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return '방금 전';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}분 전`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}시간 전`;
+            const days = Math.floor(hours / 24);
+            if (days < 7) return `${days}일 전`;
+            
+            return date.toLocaleDateString('ko-KR');
+        }
+        
+        // 페이지 로드 시 실행
+        loadApplications();
+        
+        // 5초마다 자동 새로고침 (실시간 모니터링)
+        setInterval(loadApplications, 5000);
+    </script>
+</body>
+</html>

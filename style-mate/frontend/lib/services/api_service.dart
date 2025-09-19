@@ -5,7 +5,7 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 class ApiService {
   late Dio _dio;
-  static const String baseUrl = 'https://stylemate.up.railway.app/api';
+  static const String baseUrl = 'https://money-production-452c.up.railway.app/api';
   // For local development: 'http://localhost:8000/api'
   
   ApiService() {

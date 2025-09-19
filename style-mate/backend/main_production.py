@@ -12,6 +12,7 @@ import uvicorn
 import asyncio
 import logging
 import os
+import uuid
 from datetime import datetime
 import hashlib
 import io
@@ -373,6 +374,101 @@ async def health_check():
             "memory": True
         }
     }
+
+# Beta signup endpoints - Store real data
+beta_applications = []
+
+@app.post("/api/beta-signup")
+async def beta_signup(data: dict):
+    """Store beta tester application"""
+    try:
+        # Add unique ID and server timestamp
+        application = {
+            "id": str(uuid.uuid4()),
+            "timestamp": datetime.now().isoformat(),
+            "status": "pending",
+            **data  # Include all data from frontend
+        }
+        
+        # Store in memory (persists until server restart)
+        beta_applications.append(application)
+        
+        logger.info(f"New beta signup: {application.get('email', 'unknown')}")
+        
+        return {
+            "success": True,
+            "message": "베타 신청이 완료되었습니다",
+            "application_id": application["id"]
+        }
+    except Exception as e:
+        logger.error(f"Beta signup error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/beta-applications")
+async def get_beta_applications():
+    """Get all beta applications with statistics"""
+    try:
+        # Sort by timestamp (newest first)
+        sorted_apps = sorted(
+            beta_applications, 
+            key=lambda x: x["timestamp"], 
+            reverse=True
+        )
+        
+        # Calculate real statistics
+        total = len(beta_applications)
+        today_date = datetime.now().strftime("%Y-%m-%d")
+        today = sum(1 for app in beta_applications 
+                   if app["timestamp"].startswith(today_date))
+        
+        # Device statistics
+        ios = sum(1 for app in beta_applications if app.get("device") == "iOS")
+        android = sum(1 for app in beta_applications if app.get("device") == "Android")
+        both = sum(1 for app in beta_applications if app.get("device") == "Both")
+        
+        # Age distribution
+        age_dist = {}
+        for app in beta_applications:
+            age = app.get("age", "unknown")
+            age_dist[age] = age_dist.get(age, 0) + 1
+        
+        # Fashion interest distribution
+        interest_dist = {}
+        for app in beta_applications:
+            interest = app.get("fashionInterest", "unknown")
+            interest_dist[interest] = interest_dist.get(interest, 0) + 1
+        
+        return {
+            "applications": sorted_apps,
+            "stats": {
+                "total": total,
+                "today": today,
+                "ios": ios,
+                "android": android,
+                "both": both,
+                "by_age": age_dist,
+                "by_interest": interest_dist
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Get applications error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/beta-applications/{application_id}")
+async def get_beta_application(application_id: str):
+    """Get specific beta application by ID"""
+    app = next((a for a in beta_applications if a["id"] == application_id), None)
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return app
+
+@app.delete("/api/beta-applications/{application_id}")
+async def delete_beta_application(application_id: str):
+    """Delete a beta application"""
+    global beta_applications
+    beta_applications = [a for a in beta_applications if a["id"] != application_id]
+    return {"success": True, "message": "Application deleted"}
 
 # Error handlers
 @app.exception_handler(Exception)

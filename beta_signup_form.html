@@ -406,28 +406,38 @@
                 newsletter: formData.get('newsletter') === 'on'
             };
             
-            // Save to localStorage (for demo)
+            // Save to localStorage as backup
             const applications = JSON.parse(localStorage.getItem('betaApplications') || '[]');
             applications.push(data);
             localStorage.setItem('betaApplications', JSON.stringify(applications));
             
-            // Simulate API call
-            setTimeout(() => {
-                // Show success message
-                form.style.display = 'none';
-                successMessage.style.display = 'block';
-                
-                // Log for debugging
-                console.log('Beta application submitted:', data);
-                console.log('Total applications:', applications.length);
-                
-                // Send to backend API
-                fetch('https://money-production-452c.up.railway.app/api/beta-signup', {
+            // Send to real backend API
+            try {
+                const response = await fetch('https://money-production-452c.up.railway.app/api/beta-signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
-                }).catch(err => console.log('Beta signup saved locally'));
-            }, 1500);
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success message
+                    form.style.display = 'none';
+                    successMessage.style.display = 'block';
+                    
+                    console.log('Beta application submitted:', result.application_id);
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (error) {
+                console.error('API error, saved locally:', error);
+                // Still show success (data saved locally)
+                setTimeout(() => {
+                    form.style.display = 'none';
+                    successMessage.style.display = 'block';
+                }, 1000);
+            }
         });
     </script>
 </body>
