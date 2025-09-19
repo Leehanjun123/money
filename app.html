@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#667eea">
+    <title>Style Mate - AI 스타일링 어시스턴트</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .app-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .menu-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 68px;
+            z-index: 90;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            border: none;
+            background: white;
+            color: #666;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .nav-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Upload Section */
+        .upload-area {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .upload-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.3s ease;
+        }
+        
+        .upload-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .upload-input {
+            display: none;
+        }
+        
+        /* Analysis Result */
+        .analysis-result {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .result-image {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .result-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .tag {
+            padding: 5px 15px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* Wardrobe Grid */
+        .wardrobe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .wardrobe-item {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .wardrobe-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .wardrobe-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .wardrobe-item-info {
+            padding: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        /* Outfit Card */
+        .outfit-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .outfit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .outfit-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .outfit-confidence {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .outfit-items {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .outfit-item-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .outfit-item-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .outfit-item-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .outfit-item-desc {
+            font-size: 0.9em;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .outfit-tips {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .outfit-tips-title {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .outfit-tip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.9em;
+        }
+        
+        /* Weather Widget */
+        .weather-widget {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .weather-temp {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .weather-desc {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        
+        .weather-details {
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .weather-detail {
+            text-align: center;
+        }
+        
+        .weather-detail-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .weather-detail-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5em;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .fab:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #667eea;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .empty-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #666;
+        }
+        
+        .empty-desc {
+            font-size: 0.9em;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-close {
+            float: right;
+            font-size: 1.5em;
+            color: #999;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="header-content">
+            <div class="app-title">
+                <span>👔</span>
+                <span>Style Mate</span>
+            </div>
+            <button class="menu-btn" onclick="showMenu()">☰</button>
+        </div>
+    </div>
+    
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('home')">홈</button>
+        <button class="nav-tab" onclick="switchTab('wardrobe')">옷장</button>
+        <button class="nav-tab" onclick="switchTab('outfits')">코디</button>
+        <button class="nav-tab" onclick="switchTab('weather')">날씨</button>
+    </div>
+    
+    <!-- Home Tab -->
+    <div id="home" class="tab-content active">
+        <div class="upload-area">
+            <div class="upload-icon">📸</div>
+            <h2>오늘 뭐 입지?</h2>
+            <p style="margin: 15px 0; color: #666;">
+                옷 사진을 찍거나 선택해주세요
+            </p>
+            <label for="imageUpload" class="upload-button">
+                사진 선택 / 촬영
+            </label>
+            <input type="file" id="imageUpload" class="upload-input" accept="image/*" capture="camera">
+        </div>
+        
+        <div id="homeResults"></div>
+    </div>
+    
+    <!-- Wardrobe Tab -->
+    <div id="wardrobe" class="tab-content">
+        <div class="wardrobe-grid" id="wardrobeGrid">
+            <div class="empty-state">
+                <div class="empty-icon">👕</div>
+                <div class="empty-title">옷장이 비어있어요</div>
+                <div class="empty-desc">사진을 추가해서 나만의 옷장을 만들어보세요</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Outfits Tab -->
+    <div id="outfits" class="tab-content">
+        <div class="outfit-filters" style="margin-bottom: 20px;">
+            <select id="occasionSelect" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 1em;">
+                <option value="casual">캐주얼</option>
+                <option value="business">비즈니스</option>
+                <option value="date">데이트</option>
+                <option value="sport">운동</option>
+                <option value="formal">포멀</option>
+            </select>
+        </div>
+        <button onclick="getRecommendations()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; margin-bottom: 20px;">
+            AI 코디 추천 받기
+        </button>
+        <div id="outfitsResults"></div>
+    </div>
+    
+    <!-- Weather Tab -->
+    <div id="weather" class="tab-content">
+        <div class="weather-widget">
+            <div class="weather-temp" id="weatherTemp">--°</div>
+            <div class="weather-desc" id="weatherDesc">날씨 정보 로딩중...</div>
+            <div class="weather-details">
+                <div class="weather-detail">
+                    <div class="weather-detail-label">체감</div>
+                    <div class="weather-detail-value" id="weatherFeels">--°</div>
+                </div>
+                <div class="weather-detail">
+                    <div class="weather-detail-label">습도</div>
+                    <div class="weather-detail-value" id="weatherHumidity">--%</div>
+                </div>
+                <div class="weather-detail">
+                    <div class="weather-detail-label">바람</div>
+                    <div class="weather-detail-value" id="weatherWind">-- km/h</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="outfit-card">
+            <div class="outfit-header">
+                <div class="outfit-title">오늘의 날씨 코디</div>
+            </div>
+            <div id="weatherOutfit"></div>
+        </div>
+    </div>
+    
+    <!-- FAB -->
+    <div class="fab" onclick="showUploadModal()">+</div>
+    
+    <!-- Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2>옷 추가하기</h2>
+            <p>나중에 구현 예정</p>
+        </div>
+    </div>
+    
+    <script>
+        // API Configuration
+        const API_URL = 'https://money-production-452c.up.railway.app';
+        
+        // Initialize
+        let currentTab = 'home';
+        let wardrobeItems = [];
+        
+        // Tab Switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Set active nav tab
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Load tab data
+            if (tabName === 'weather') {
+                loadWeather();
+            }
+        }
+        
+        // Image Upload Handler
+        document.getElementById('imageUpload').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Show loading
+            const resultsDiv = document.getElementById('homeResults');
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>AI가 옷을 분석하고 있어요...</p>
+                </div>
+            `;
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                displayAnalysisResult(data);
+                
+                // Save to wardrobe
+                saveToWardrobe(file, data);
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="analysis-result" style="color: red;">
+                        분석 중 오류가 발생했습니다. 다시 시도해주세요.
+                    </div>
+                `;
+            }
+        });
+        
+        // Display Analysis Result
+        function displayAnalysisResult(data) {
+            const resultsDiv = document.getElementById('homeResults');
+            
+            if (data.items && data.items.length > 0) {
+                let resultHTML = `<div class="analysis-result">`;
+                
+                data.items.forEach(item => {
+                    resultHTML += `
+                        <h3>🎯 발견된 아이템</h3>
+                        <div class="result-tags">
+                            <span class="tag">${item.category}</span>
+                            <span class="tag">${item.color || '색상 분석중'}</span>
+                            <span class="tag">${(item.confidence * 100).toFixed(0)}% 확신도</span>
+                        </div>
+                    `;
+                });
+                
+                resultHTML += `
+                    <button onclick="getInstantRecommendation()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-weight: bold; margin-top: 15px;">
+                        이 옷으로 코디 추천 받기
+                    </button>
+                </div>`;
+                
+                resultsDiv.innerHTML = resultHTML;
+            }
+        }
+        
+        // Get Outfit Recommendations
+        async function getRecommendations() {
+            const occasion = document.getElementById('occasionSelect').value;
+            const resultsDiv = document.getElementById('outfitsResults');
+            
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>AI가 코디를 준비하고 있어요...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/coordinate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: 'beta_user',
+                        occasion: occasion
+                    })
+                });
+                
+                const data = await response.json();
+                displayRecommendations(data.recommendations);
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="outfit-card" style="color: red;">
+                        추천을 가져올 수 없습니다. 다시 시도해주세요.
+                    </div>
+                `;
+            }
+        }
+        
+        // Display Recommendations
+        function displayRecommendations(recommendations) {
+            const resultsDiv = document.getElementById('outfitsResults');
+            let html = '';
+            
+            recommendations.forEach(rec => {
+                html += `
+                    <div class="outfit-card">
+                        <div class="outfit-header">
+                            <div class="outfit-title">추천 ${rec.ranking}</div>
+                            <div class="outfit-confidence">${rec.confidence}% 매칭</div>
+                        </div>
+                        <div class="outfit-items">
+                            <div class="outfit-item-box">
+                                <div class="outfit-item-icon">👔</div>
+                                <div class="outfit-item-label">상의</div>
+                                <div class="outfit-item-desc">${rec.outfit.top.type}</div>
+                            </div>
+                            <div class="outfit-item-box">
+                                <div class="outfit-item-icon">👖</div>
+                                <div class="outfit-item-label">하의</div>
+                                <div class="outfit-item-desc">${rec.outfit.bottom.type}</div>
+                            </div>
+                            <div class="outfit-item-box">
+                                <div class="outfit-item-icon">👟</div>
+                                <div class="outfit-item-label">신발</div>
+                                <div class="outfit-item-desc">${rec.outfit.shoes.type}</div>
+                            </div>
+                        </div>
+                        <div class="outfit-tips">
+                            <div class="outfit-tips-title">💡 스타일링 팁</div>
+                            ${rec.styling_tips.map(tip => `
+                                <div class="outfit-tip">
+                                    <span>•</span>
+                                    <span>${tip}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Load Weather
+        async function loadWeather() {
+            try {
+                const response = await fetch(`${API_URL}/api/weather/Seoul`);
+                const data = await response.json();
+                
+                document.getElementById('weatherTemp').textContent = `${data.temperature}°`;
+                document.getElementById('weatherDesc').textContent = data.description;
+                document.getElementById('weatherFeels').textContent = `${data.feels_like}°`;
+                document.getElementById('weatherHumidity').textContent = `${data.humidity}%`;
+                document.getElementById('weatherWind').textContent = `${data.wind_speed} km/h`;
+                
+                // Get weather-based outfit
+                getWeatherOutfit(data);
+            } catch (error) {
+                console.error('Weather error:', error);
+            }
+        }
+        
+        // Get Weather-based Outfit
+        async function getWeatherOutfit(weather) {
+            const outfitDiv = document.getElementById('weatherOutfit');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/coordinate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: 'beta_user',
+                        occasion: 'casual',
+                        weather_override: weather
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.recommendations && data.recommendations[0]) {
+                    const rec = data.recommendations[0];
+                    outfitDiv.innerHTML = `
+                        <p style="margin-bottom: 15px; color: #666;">
+                            ${weather.temperature}°C 날씨에 추천하는 스타일
+                        </p>
+                        <div class="outfit-items">
+                            <div class="outfit-item-box">
+                                <div class="outfit-item-icon">👔</div>
+                                <div class="outfit-item-desc">${rec.outfit.top.type}</div>
+                            </div>
+                            <div class="outfit-item-box">
+                                <div class="outfit-item-icon">👖</div>
+                                <div class="outfit-item-desc">${rec.outfit.bottom.type}</div>
+                            </div>
+                            <div class="outfit-item-box">
+                                <div class="outfit-item-icon">👟</div>
+                                <div class="outfit-item-desc">${rec.outfit.shoes.type}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Weather outfit error:', error);
+            }
+        }
+        
+        // Save to Wardrobe (Local Storage)
+        function saveToWardrobe(file, analysisData) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const item = {
+                    id: Date.now(),
+                    image: e.target.result,
+                    ...analysisData.items[0],
+                    date: new Date().toISOString()
+                };
+                
+                wardrobeItems.push(item);
+                localStorage.setItem('wardrobeItems', JSON.stringify(wardrobeItems));
+                updateWardrobeGrid();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Update Wardrobe Grid
+        function updateWardrobeGrid() {
+            const grid = document.getElementById('wardrobeGrid');
+            
+            if (wardrobeItems.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">👕</div>
+                        <div class="empty-title">옷장이 비어있어요</div>
+                        <div class="empty-desc">사진을 추가해서 나만의 옷장을 만들어보세요</div>
+                    </div>
+                `;
+            } else {
+                grid.innerHTML = wardrobeItems.map(item => `
+                    <div class="wardrobe-item">
+                        <img src="${item.image}" alt="${item.category}">
+                        <div class="wardrobe-item-info">
+                            <div>${item.category}</div>
+                            <div style="font-size: 0.8em; color: #999;">${item.color || '색상 미정'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // Modal Functions
+        function showUploadModal() {
+            document.getElementById('uploadModal').classList.add('show');
+        }
+        
+        function closeModal() {
+            document.getElementById('uploadModal').classList.remove('show');
+        }
+        
+        function showMenu() {
+            alert('메뉴는 다음 업데이트에 추가됩니다!');
+        }
+        
+        // Initialize on load
+        window.onload = function() {
+            // Load saved wardrobe items
+            wardrobeItems = JSON.parse(localStorage.getItem('wardrobeItems') || '[]');
+            updateWardrobeGrid();
+            
+            // Register service worker for PWA
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+            }
+        };
+    </script>
+</body>
+</html>
