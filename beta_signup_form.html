@@ -421,12 +421,12 @@
                 console.log('Beta application submitted:', data);
                 console.log('Total applications:', applications.length);
                 
-                // You could send this to your backend API
-                // fetch('https://your-api.railway.app/beta-signup', {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify(data)
-                // });
+                // Send to backend API
+                fetch('https://money-production-452c.up.railway.app/api/beta-signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                }).catch(err => console.log('Beta signup saved locally'));
             }, 1500);
         });
     </script>
