@@ -10,4 +10,5 @@ python manage.py collectstatic --noinput
 # python manage.py createsuperuser --noinput --username admin --email admin@stylemate.com || true
 
 # Gunicorn 서버 시작
+PORT=${PORT:-8000}
 exec gunicorn stylemate.wsgi --log-file - --bind 0.0.0.0:$PORT
