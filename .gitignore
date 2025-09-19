@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+hypersonic_env/
+
+# API Keys and Secrets
+.env
+*.env
+config.json
+secrets.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backtest Results
+backtest_results/
+data/historical/
+
+# Models
+data/models/
+*.h5
+*.pkl
+*.pth
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Railway
+.railway/
+
+# Node (for Railway CLI)
+node_modules/
+package-lock.json
