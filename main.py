@@ -29,6 +29,18 @@ logger = logging.getLogger(__name__)
 # In-memory cache (simple implementation)
 cache = {}
 
+# Import advanced services if available
+try:
+    import sys
+    sys.path.append('/Users/leehanjun/Desktop/money')
+    from style_mate.backend.services.advanced_ai_service import AdvancedAIService
+    from style_mate.backend.services.outfit_generator import OutfitImageGenerator
+    USE_ADVANCED_AI = True
+    logger.info("Advanced AI services loaded successfully")
+except ImportError as e:
+    USE_ADVANCED_AI = False
+    logger.warning(f"Advanced AI services not available: {e}")
+
 class SimpleAIService:
     """Lightweight AI service using OpenCV"""
     
@@ -217,7 +229,15 @@ class RecommendationEngine:
         return tips
 
 # Initialize services
-ai_service = SimpleAIService()
+if USE_ADVANCED_AI:
+    ai_service = AdvancedAIService()
+    outfit_generator = OutfitImageGenerator()
+    logger.info("Using advanced AI services")
+else:
+    ai_service = SimpleAIService()
+    outfit_generator = None
+    logger.info("Using simple AI services")
+
 recommendation_engine = RecommendationEngine(ai_service)
 
 @asynccontextmanager
@@ -225,8 +245,9 @@ async def lifespan(app: FastAPI):
     """Application lifecycle management"""
     # Startup
     logger.info("🚀 Starting Style Mate Production Server...")
-    await ai_service.initialize()
-    logger.info("✅ Server ready")
+    if hasattr(ai_service, 'initialize'):
+        await ai_service.initialize()
+    logger.info(f"✅ Server ready (Advanced AI: {USE_ADVANCED_AI})")
     
     yield
     
@@ -304,18 +325,39 @@ async def analyze_clothing(
 async def get_coordination(
     user_id: str = "default",
     occasion: str = "casual",
-    weather: Optional[Dict] = None
+    weather: Optional[Dict] = None,
+    generate_image: bool = False
 ):
-    """Get outfit recommendations"""
+    """Get outfit recommendations with optional image generation"""
     recommendations = await recommendation_engine.get_recommendations(
         user_id, occasion, weather
     )
+    
+    # Generate outfit images if requested and available
+    if generate_image and outfit_generator and recommendations:
+        for rec in recommendations[:2]:  # Generate for top 2 recommendations
+            try:
+                outfit_data = {
+                    'occasion': occasion,
+                    'top': rec['outfit'].get('top'),
+                    'bottom': rec['outfit'].get('bottom'),
+                    'shoes': rec['outfit'].get('shoes'),
+                    'styling_tips': rec.get('styling_tips', [])
+                }
+                
+                image_result = await outfit_generator.generate_outfit_image(outfit_data)
+                rec['outfit_image'] = image_result['image']
+                rec['style_notes'] = image_result.get('style_notes', [])
+            except Exception as e:
+                logger.warning(f"Failed to generate outfit image: {e}")
+                rec['outfit_image'] = None
     
     return {
         "status": "success",
         "recommendations": recommendations,
         "user_id": user_id,
-        "occasion": occasion
+        "occasion": occasion,
+        "has_images": generate_image and outfit_generator is not None
     }
 
 @app.get("/api/weather/{location}")

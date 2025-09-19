@@ -483,11 +483,30 @@
     <div id="outfits" class="tab-content">
         <div class="outfit-filters" style="margin-bottom: 20px;">
             <select id="occasionSelect" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 1em;">
-                <option value="casual">캐주얼</option>
-                <option value="business">비즈니스</option>
-                <option value="date">데이트</option>
-                <option value="sport">운동</option>
-                <option value="formal">포멀</option>
+                <optgroup label="일상">
+                    <option value="casual">캐주얼</option>
+                    <option value="smart_casual">스마트 캐주얼</option>
+                    <option value="streetwear">스트릿웨어</option>
+                    <option value="minimalist">미니멀</option>
+                </optgroup>
+                <optgroup label="비즈니스">
+                    <option value="business">비즈니스 정장</option>
+                    <option value="business_casual">비즈니스 캐주얼</option>
+                    <option value="formal">포멀</option>
+                    <option value="semi_formal">세미포멀</option>
+                </optgroup>
+                <optgroup label="특별한 날">
+                    <option value="date">데이트</option>
+                    <option value="party">파티</option>
+                    <option value="wedding_guest">결혼식 하객</option>
+                    <option value="interview">면접</option>
+                </optgroup>
+                <optgroup label="활동">
+                    <option value="sport">운동/스포츠</option>
+                    <option value="travel">여행</option>
+                    <option value="outdoor">아웃도어</option>
+                    <option value="home">집에서 편하게</option>
+                </optgroup>
             </select>
         </div>
         <button onclick="getRecommendations()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; margin-bottom: 20px;">
@@ -657,7 +676,8 @@
                     },
                     body: JSON.stringify({
                         user_id: 'beta_user',
-                        occasion: occasion
+                        occasion: occasion,
+                        generate_image: true  // 이미지 생성 요청
                     })
                 });
                 
@@ -684,23 +704,37 @@
                             <div class="outfit-title">추천 ${rec.ranking}</div>
                             <div class="outfit-confidence">${rec.confidence}% 매칭</div>
                         </div>
+                        ${rec.outfit_image ? `
+                            <img src="${rec.outfit_image}" alt="Outfit visualization" style="width: 100%; border-radius: 10px; margin-bottom: 15px;">
+                        ` : ''}
                         <div class="outfit-items">
                             <div class="outfit-item-box">
                                 <div class="outfit-item-icon">👔</div>
                                 <div class="outfit-item-label">상의</div>
-                                <div class="outfit-item-desc">${rec.outfit.top.type}</div>
+                                <div class="outfit-item-desc">${rec.outfit.top.type || '선택'}</div>
+                                ${rec.outfit.top.color ? `<div style="font-size: 0.8em; color: #999;">${rec.outfit.top.color}</div>` : ''}
                             </div>
                             <div class="outfit-item-box">
                                 <div class="outfit-item-icon">👖</div>
                                 <div class="outfit-item-label">하의</div>
-                                <div class="outfit-item-desc">${rec.outfit.bottom.type}</div>
+                                <div class="outfit-item-desc">${rec.outfit.bottom.type || '선택'}</div>
+                                ${rec.outfit.bottom.color ? `<div style="font-size: 0.8em; color: #999;">${rec.outfit.bottom.color}</div>` : ''}
                             </div>
                             <div class="outfit-item-box">
                                 <div class="outfit-item-icon">👟</div>
                                 <div class="outfit-item-label">신발</div>
-                                <div class="outfit-item-desc">${rec.outfit.shoes.type}</div>
+                                <div class="outfit-item-desc">${rec.outfit.shoes.type || '선택'}</div>
+                                ${rec.outfit.shoes.color ? `<div style="font-size: 0.8em; color: #999;">${rec.outfit.shoes.color}</div>` : ''}
                             </div>
                         </div>
+                        ${rec.style_notes && rec.style_notes.length > 0 ? `
+                            <div style="background: #f0f8ff; border-radius: 10px; padding: 15px; margin: 15px 0;">
+                                <div style="font-weight: bold; color: #1976d2; margin-bottom: 10px;">✨ 스타일 노트</div>
+                                ${rec.style_notes.map(note => `
+                                    <div style="margin-bottom: 5px; color: #666;">${note}</div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
                         <div class="outfit-tips">
                             <div class="outfit-tips-title">💡 스타일링 팁</div>
                             ${rec.styling_tips.map(tip => `
