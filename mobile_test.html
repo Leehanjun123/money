@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Style Mate - 모바일 테스트</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .test-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        button:active {
+            opacity: 0.8;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .file-label {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
+            color: white;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        #preview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #667eea;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-offline {
+            background: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+            }
+        }
+        
+        .outfit-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .outfit-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .outfit-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👔 Style Mate</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">모바일 기능 테스트</p>
+        
+        <!-- 서버 상태 체크 -->
+        <div class="test-section">
+            <div class="test-title">
+                <span class="status-indicator" id="statusIndicator"></span>
+                서버 상태
+            </div>
+            <button onclick="checkServerStatus()">서버 상태 확인</button>
+            <div id="serverStatus" class="result"></div>
+        </div>
+        
+        <!-- 이미지 분석 테스트 -->
+        <div class="test-section">
+            <div class="test-title">📸 이미지 분석</div>
+            <div class="file-input-wrapper">
+                <label for="imageInput" class="file-label">
+                    사진 선택 또는 촬영
+                </label>
+                <input type="file" id="imageInput" accept="image/*" capture="camera" onchange="previewImage(event)">
+            </div>
+            <img id="preview" alt="Preview">
+            <button onclick="analyzeImage()" style="margin-top: 10px;">AI 분석 시작</button>
+            <div id="analysisResult" class="result"></div>
+        </div>
+        
+        <!-- 코디 추천 테스트 -->
+        <div class="test-section">
+            <div class="test-title">👔 코디 추천</div>
+            <select id="occasion" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px;">
+                <option value="casual">캐주얼</option>
+                <option value="business">비즈니스</option>
+                <option value="date">데이트</option>
+                <option value="sport">운동</option>
+            </select>
+            <button onclick="getRecommendations()">코디 추천 받기</button>
+            <div id="recommendationsResult" class="result"></div>
+        </div>
+        
+        <!-- 날씨 정보 -->
+        <div class="test-section">
+            <div class="test-title">🌤️ 날씨 정보</div>
+            <button onclick="getWeather()">서울 날씨 확인</button>
+            <div id="weatherResult" class="result"></div>
+        </div>
+        
+        <!-- 통계 -->
+        <div class="test-section">
+            <div class="test-title">📊 API 통계</div>
+            <button onclick="getStats()">통계 확인</button>
+            <div id="statsResult" class="result"></div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #667eea;">처리 중...</p>
+        </div>
+    </div>
+    
+    <script>
+        // API 엔드포인트 (로컬 테스트용)
+        const API_URL = 'http://localhost:8001';
+        // Railway 배포 후: const API_URL = 'https://your-app.up.railway.app';
+        
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function showResult(elementId, content, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = isSuccess ? 'result success' : 'result error';
+            element.textContent = typeof content === 'object' ? 
+                JSON.stringify(content, null, 2) : content;
+        }
+        
+        // 서버 상태 확인
+        async function checkServerStatus() {
+            showLoading();
+            const indicator = document.getElementById('statusIndicator');
+            
+            try {
+                const response = await fetch(`${API_URL}/`);
+                const data = await response.json();
+                
+                indicator.className = 'status-indicator status-online';
+                showResult('serverStatus', `✅ 서버 정상 작동 중\n\n${JSON.stringify(data, null, 2)}`, true);
+            } catch (error) {
+                indicator.className = 'status-indicator status-offline';
+                showResult('serverStatus', `❌ 서버 연결 실패\n${error.message}`, false);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 이미지 미리보기
+        function previewImage(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('preview');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // 이미지 분석
+        async function analyzeImage() {
+            const fileInput = document.getElementById('imageInput');
+            if (!fileInput.files[0]) {
+                alert('먼저 이미지를 선택해주세요!');
+                return;
+            }
+            
+            showLoading();
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                let resultText = `✅ 분석 완료!\n\n`;
+                if (data.items && data.items.length > 0) {
+                    resultText += `발견된 아이템: ${data.count}개\n\n`;
+                    data.items.forEach((item, index) => {
+                        resultText += `아이템 ${index + 1}:\n`;
+                        resultText += `  - 카테고리: ${item.category}\n`;
+                        resultText += `  - 신뢰도: ${(item.confidence * 100).toFixed(0)}%\n`;
+                        resultText += `  - 색상: ${item.color || '분석중'}\n\n`;
+                    });
+                }
+                resultText += `처리 시간: ${data.processing_time?.toFixed(2)}초`;
+                
+                showResult('analysisResult', resultText, true);
+            } catch (error) {
+                showResult('analysisResult', `❌ 분석 실패\n${error.message}`, false);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 코디 추천
+        async function getRecommendations() {
+            showLoading();
+            const occasion = document.getElementById('occasion').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/coordinate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: 'test_user',
+                        occasion: occasion
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let resultHTML = `<div style="color: green; font-weight: bold;">✅ ${occasion} 스타일 추천</div><br>`;
+                
+                if (data.recommendations) {
+                    data.recommendations.forEach(rec => {
+                        resultHTML += `<div class="outfit-card">`;
+                        resultHTML += `<h4>추천 ${rec.ranking} (${rec.confidence}% 확신도)</h4>`;
+                        resultHTML += `<div class="outfit-item"><span>상의:</span><span>${rec.outfit.top.type} (${rec.outfit.top.color})</span></div>`;
+                        resultHTML += `<div class="outfit-item"><span>하의:</span><span>${rec.outfit.bottom.type} (${rec.outfit.bottom.color})</span></div>`;
+                        resultHTML += `<div class="outfit-item"><span>신발:</span><span>${rec.outfit.shoes.type} (${rec.outfit.shoes.color})</span></div>`;
+                        if (rec.outfit.outerwear) {
+                            resultHTML += `<div class="outfit-item"><span>아우터:</span><span>${rec.outfit.outerwear.type}</span></div>`;
+                        }
+                        resultHTML += `<div style="margin-top: 10px; font-size: 13px; color: #666;">💡 ${rec.styling_tips.join(', ')}</div>`;
+                        resultHTML += `</div>`;
+                    });
+                }
+                
+                const element = document.getElementById('recommendationsResult');
+                element.style.display = 'block';
+                element.innerHTML = resultHTML;
+            } catch (error) {
+                showResult('recommendationsResult', `❌ 추천 실패\n${error.message}`, false);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 날씨 정보
+        async function getWeather() {
+            showLoading();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/weather/Seoul`);
+                const data = await response.json();
+                
+                const resultText = `🌤️ 서울 날씨\n\n` +
+                    `온도: ${data.temperature}°C\n` +
+                    `체감: ${data.feels_like}°C\n` +
+                    `습도: ${data.humidity}%\n` +
+                    `날씨: ${data.conditions}\n` +
+                    `설명: ${data.description}\n` +
+                    `바람: ${data.wind_speed} km/h`;
+                
+                showResult('weatherResult', resultText, true);
+            } catch (error) {
+                showResult('weatherResult', `❌ 날씨 조회 실패\n${error.message}`, false);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 통계
+        async function getStats() {
+            showLoading();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/stats`);
+                const data = await response.json();
+                
+                const resultText = `📊 API 통계\n\n` +
+                    `캐시 크기: ${data.cache_size}\n` +
+                    `AI 상태: ${data.ai_status}\n` +
+                    `서버 상태: ${data.uptime}\n` +
+                    `메모리 사용: ${data.memory_usage}`;
+                
+                showResult('statsResult', resultText, true);
+            } catch (error) {
+                showResult('statsResult', `❌ 통계 조회 실패\n${error.message}`, false);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 페이지 로드 시 서버 상태 확인
+        window.onload = function() {
+            checkServerStatus();
+        };
+    </script>
+</body>
+</html>
